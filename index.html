@@ -135,6 +135,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary w-full">提交留言</button>
             </form>
+            <p class="text-sm text-gray-600 text-center mt-4" id="currentPostingHours">当前发言时段：加载中...</p>
         </div>
 
         <!-- 留言列表 -->
@@ -159,13 +160,32 @@
             <p id="adminStatus" class="text-center mt-4 text-sm"></p>
             <button id="adminLogoutBtn" class="btn btn-danger w-full mt-4 hidden">退出管理员</button>
         </div>
+
+        <!-- 管理员设置发言时段 -->
+        <div class="p-6 bg-white rounded-xl shadow-md mt-6" id="adminConfigSection" style="display: none;">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">设置发言时段 (管理员)</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="setStartTime" class="block text-sm font-medium text-gray-700 mb-1">开始时间:</label>
+                    <input type="time" id="setStartTime" class="input-field" required>
+                </div>
+                <div>
+                    <label for="setEndTime" class="block text-sm font-medium text-gray-700 mb-1">结束时间:</label>
+                    <input type="time" id="setEndTime" class="input-field" required>
+                </div>
+                <button id="savePostingHoursBtn" class="btn btn-primary w-full">保存设置</button>
+            </div>
+            <p id="postingHoursStatus" class="text-center mt-4 text-sm"></p>
+        </div>
     </div>
 
     <script>
         // 配置您的 Cloudflare Worker URL
-        const WORKER_URL = 'https://guest.mr-onion-blog.fun'; // <-- **请替换为您的 Worker URL**
+        const WORKER_URL = 'YOUR_CLOUDFLARE_WORKER_URL'; // <-- **请替换为您的 Worker URL**
 
         let isAdmin = localStorage.getItem('isAdmin') === 'true'; // 从本地存储检查管理员状态
+        let postingStartTime = '00:00'; // 默认全天
+        let postingEndTime = '23:59'; // 默认全天
 
         const messagesContainer = document.getElementById('messagesContainer');
         const messageForm = document.getElementById('messageForm');
@@ -174,6 +194,12 @@
         const adminStatusText = document.getElementById('adminStatus');
         const adminLogoutBtn = document.getElementById('adminLogoutBtn');
         const noMessagesText = document.getElementById('noMessagesText');
+        const adminConfigSection = document.getElementById('adminConfigSection');
+        const setStartTimeInput = document.getElementById('setStartTime');
+        const setEndTimeInput = document.getElementById('setEndTime');
+        const savePostingHoursBtn = document.getElementById('savePostingHoursBtn');
+        const postingHoursStatusText = document.getElementById('postingHoursStatus');
+        const currentPostingHoursText = document.getElementById('currentPostingHours');
 
         // 辅助函数：格式化时间戳
         function formatTimestamp(timestamp) {
@@ -186,6 +212,39 @@
                 minute: '2-digit',
                 second: '2-digit'
             });
+        }
+
+        // 检查当前时间是否在允许的发言时段内
+        function isCurrentTimeWithinHours() {
+            const now = new Date();
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+            const [startHour, startMinute] = postingStartTime.split(':').map(Number);
+            const startTimeInMinutes = startHour * 60 + startMinute;
+
+            const [endHour, endMinute] = postingEndTime.split(':').map(Number);
+            const endTimeInMinutes = endHour * 60 + endMinute;
+
+            let isAllowed = false;
+            if (startTimeInMinutes <= endTimeInMinutes) {
+                // 正常情况：开始时间在结束时间之前或相同 (例如 09:00 - 17:00)
+                isAllowed = currentTimeInMinutes >= startTimeInMinutes && currentTimeInMinutes <= endTimeInMinutes;
+            } else {
+                // 跨夜情况：结束时间在第二天 (例如 22:00 - 06:00)
+                isAllowed = currentTimeInMinutes >= startTimeInMinutes || currentTimeInMinutes <= endTimeInMinutes;
+            }
+            return isAllowed;
+        }
+
+        // 更新发言时段显示
+        function updatePostingHoursDisplay() {
+            if (postingStartTime === '00:00' && postingEndTime === '23:59') {
+                currentPostingHoursText.textContent = '当前发言时段：全天开放';
+            } else {
+                currentPostingHoursText.textContent = `当前发言时段：${postingStartTime} - ${postingEndTime}`;
+            }
         }
 
         // 渲染留言列表
@@ -310,23 +369,58 @@
             }
         }
 
+        // 获取配置 (发言时段)
+        async function fetchConfig() {
+            try {
+                const response = await fetch(`${WORKER_URL}/config`);
+                if (!response.ok) {
+                    throw new Error(`HTTP 错误！状态: ${response.status}`);
+                }
+                const config = await response.json();
+                postingStartTime = config.postingStartTime || '00:00';
+                postingEndTime = config.postingEndTime || '23:59';
+                updatePostingHoursDisplay();
+                if (isAdmin) {
+                    setStartTimeInput.value = postingStartTime;
+                    setEndTimeInput.value = postingEndTime;
+                }
+            } catch (error) {
+                console.error('获取配置失败:', error);
+                postingHoursStatusText.textContent = '获取发言时段失败。';
+                postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                updatePostingHoursDisplay(); // 保持默认值显示
+            }
+        }
+
         // 提交留言
         messageForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const message = document.getElementById('message').value;
 
+            // 非管理员用户检查发言时段
+            if (!isAdmin) {
+                if (!isCurrentTimeWithinHours()) {
+                    showCustomAlert(`当前不在允许的发言时段内。发言时段：${postingStartTime} - ${postingEndTime}`);
+                    return; // 阻止表单提交
+                }
+            }
+
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (isAdmin) {
+                    headers['X-Admin-Token'] = 'true'; // 如果是管理员，发送管理员令牌
+                }
+
                 const response = await fetch(`${WORKER_URL}/messages`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: headers,
                     body: JSON.stringify({ username, message }),
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP 错误！状态: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP 错误！状态: ${response.status}, 消息: ${errorText}`);
                 }
 
                 document.getElementById('username').value = '';
@@ -334,7 +428,7 @@
                 await fetchMessages(); // 刷新留言列表
             } catch (error) {
                 console.error('提交留言失败:', error);
-                showCustomAlert('提交留言失败。'); // 使用自定义模态框
+                showCustomAlert('提交留言失败。' + (error.message || '')); // 使用自定义模态框
             }
         });
 
@@ -364,7 +458,9 @@
                     adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
                     adminLogoutBtn.classList.remove('hidden');
                     adminLoginForm.classList.add('hidden'); // 隐藏登录表单
+                    adminConfigSection.style.display = 'block'; // 显示管理员配置区
                     await fetchMessages(); // 刷新以显示删除按钮
+                    await fetchConfig(); // 刷新配置显示
                 } else {
                     isAdmin = false;
                     localStorage.setItem('isAdmin', 'false');
@@ -388,7 +484,9 @@
             adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
             adminLogoutBtn.classList.add('hidden');
             adminLoginForm.classList.remove('hidden'); // 显示登录表单
+            adminConfigSection.style.display = 'none'; // 隐藏管理员配置区
             fetchMessages(); // 刷新以隐藏删除按钮
+            fetchConfig(); // 刷新配置显示
         });
 
         // 删除留言
@@ -403,39 +501,85 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP 错误！状态: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP 错误！状态: ${response.status}, 消息: ${errorText}`);
                 }
 
                 await fetchMessages(); // 刷新留言列表
             } catch (error) {
                 console.error('删除留言失败:', error);
-                showCustomAlert('删除留言失败。'); // 使用自定义模态框
+                showCustomAlert('删除留言失败。' + (error.message || '')); // 使用自定义模态框
             }
         }
 
         // 添加回复
         async function addReply(messageId, username, replyMessage, isAdminReply) {
             try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (isAdminReply) {
+                    headers['X-Admin-Token'] = 'true'; // 如果是管理员回复，发送管理员令牌
+                }
+
                 const response = await fetch(`${WORKER_URL}/messages/${messageId}/replies`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        // 如果是管理员回复，发送管理员令牌
-                        ...(isAdminReply && { 'X-Admin-Token': 'true' })
-                    },
+                    headers: headers,
                     body: JSON.stringify({ username, message: replyMessage, isAdminReply }),
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP 错误！状态: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP 错误！状态: ${response.status}, 消息: ${errorText}`);
                 }
 
                 await fetchMessages(); // 刷新留言列表以显示新回复
             } catch (error) {
                 console.error('添加回复失败:', error);
-                showCustomAlert('添加回复失败。'); // 使用自定义模态框
+                showCustomAlert('添加回复失败。' + (error.message || '')); // 使用自定义模态框
             }
         }
+
+        // 保存发言时段设置
+        savePostingHoursBtn.addEventListener('click', async () => {
+            const startTime = setStartTimeInput.value;
+            const endTime = setEndTimeInput.value;
+
+            if (!startTime || !endTime) {
+                postingHoursStatusText.textContent = '请填写开始时间和结束时间。';
+                postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${WORKER_URL}/config`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': 'true', // 必须发送管理员令牌
+                    },
+                    body: JSON.stringify({ postingStartTime: startTime, postingEndTime: endTime }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP 错误！状态: ${response.status}, 消息: ${errorText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    postingHoursStatusText.textContent = '发言时段设置成功！';
+                    postingHoursStatusText.className = 'text-center mt-4 text-sm text-green-600';
+                    await fetchConfig(); // 刷新页面上的时段显示
+                } else {
+                    postingHoursStatusText.textContent = '设置失败。';
+                    postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                }
+            } catch (error) {
+                console.error('保存发言时段失败:', error);
+                postingHoursStatusText.textContent = '保存发言时段失败。' + (error.message || '');
+                postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+            }
+        });
+
 
         // 自定义模态框函数 (替代 alert 和 confirm)
         function showCustomAlert(message) {
@@ -480,16 +624,19 @@
         // 初始化加载留言和更新管理员状态显示
         document.addEventListener('DOMContentLoaded', () => {
             fetchMessages();
+            fetchConfig(); // 页面加载时获取配置
             if (isAdmin) {
                 adminStatusText.textContent = '已登录为管理员。';
                 adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
                 adminLogoutBtn.classList.remove('hidden');
                 adminLoginForm.classList.add('hidden');
+                adminConfigSection.style.display = 'block'; // 显示管理员配置区
             } else {
                 adminStatusText.textContent = '未登录管理员。';
                 adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
                 adminLogoutBtn.classList.add('hidden');
                 adminLoginForm.classList.remove('hidden');
+                adminConfigSection.style.display = 'none'; // 隐藏管理员配置区
             }
         });
     </script>
