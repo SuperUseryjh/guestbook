@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>留言板 | NSOI</title>
+    <link rel="icon" href="https://mr-onion-blog.fun/img/avatar.png" type="image/png">
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -179,6 +180,16 @@
         </div>
     </div>
 
+    <!-- Developer Info Footer -->
+    <footer class="mt-8 py-4 text-center text-gray-600 text-sm">
+        <div class="container mx-auto">
+            <p>开发者信息：Mr_Onion</p>
+            <p>联系邮箱：admin@mr-onion-blog.fun</p>
+            <p>开发者首页：<a href="https://mr-onion-blog.fun" target="_blank" class="text-blue-600 hover:underline">Mr_Onion's Blog</a></p>
+            <p class="mt-2">&copy; 2024 NSOI题目审核系统. All rights reserved.</p>
+        </div>
+    </footer>
+
     <script>
         // Configure your Cloudflare Worker URL
         const WORKER_URL = 'https://guest.mr-onion-blog.fun'; // <-- **PLEASE REPLACE WITH YOUR WORKER URL**
@@ -282,9 +293,9 @@
                     messageCard.innerHTML = `
                         <div class="message-header">
                             <div class="message-content-main">
-                                <p class="text-lg font-semibold text-gray-900">${msg.username}</p>
-                                <p class="text-gray-700 mt-1">${msg.message}</p>
-                                <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp)}</p>
+                                <p class="text-lg font-semibold text-gray-900">${msg.username ?? ''}</p>
+                                <p class="text-gray-700 mt-1">${msg.message ?? ''}</p>
+                                <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
                             </div>
                             ${isAdmin ? `
                                 <div class="admin-controls">
@@ -299,11 +310,11 @@
                                     msg.replies.map(reply => `
                                         <div class="reply-card">
                                             <p class="font-medium text-gray-800">
-                                                ${reply.username}
+                                                ${reply.username ?? ''}
                                                 ${reply.isAdminReply ? '<span class="admin-reply-badge">管理员回复</span>' : ''}
                                             </p>
-                                            <p class="text-gray-700">${reply.message}</p>
-                                            <p class="text-xs text-gray-500 mt-1">${formatTimestamp(reply.timestamp)}</p>
+                                            <p class="text-gray-700">${reply.message ?? ''}</p>
+                                            <p class="text-xs text-gray-500 mt-1">${formatTimestamp(reply.timestamp ?? 0)}</p>
                                         </div>
                                     `).join('')
                                     : '<p class="text-gray-500 text-sm">暂无回复。</p>'
