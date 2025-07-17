@@ -392,7 +392,17 @@
                 if (!response.ok) {
                     throw new Error(`HTTP Error! Status: ${response.status}`);
                 }
-                const messages = await response.json();
+                const rawMessages = await response.json();
+                
+                // Filter out any malformed messages before rendering
+                const messages = rawMessages.filter(msg => 
+                    typeof msg === 'object' && msg !== null &&
+                    typeof msg.id === 'string' &&
+                    typeof msg.username === 'string' &&
+                    typeof msg.message === 'string' &&
+                    typeof msg.timestamp === 'number'
+                );
+
                 // Sort by timestamp in descending order (latest first)
                 messages.sort((a, b) => b.timestamp - a.timestamp);
                 renderMessages(messages);
