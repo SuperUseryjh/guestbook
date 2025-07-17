@@ -109,6 +109,16 @@
             font-weight: 600;
             margin-left: 0.5rem;
         }
+        /* New style for admin message badge */
+        .admin-message-badge {
+            background-color: #34d399; /* Green for admin messages */
+            color: #065f46;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
         .reply-form-container {
             margin-top: 1rem;
             padding: 1rem;
@@ -293,7 +303,10 @@
                     messageCard.innerHTML = `
                         <div class="message-header">
                             <div class="message-content-main">
-                                <p class="text-lg font-semibold text-gray-900">${msg.username ?? ''}</p>
+                                <p class="text-lg font-semibold text-gray-900">
+                                    ${msg.username ?? ''}
+                                    ${msg.isAdminMessage ? '<span class="admin-message-badge">管理员</span>' : ''}
+                                </p>
                                 <p class="text-gray-700 mt-1">${msg.message ?? ''}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
                             </div>
@@ -457,14 +470,17 @@
 
             try {
                 const headers = { 'Content-Type': 'application/json' };
+                let bodyData = { username, message };
+
                 if (isAdmin) {
                     headers['X-Admin-Token'] = 'true'; // If admin, send admin token
+                    bodyData.isAdminMessage = true; // Add isAdminMessage flag for admin's direct messages
                 }
 
                 const response = await fetch(`${WORKER_URL}/messages`, {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify({ username, message }),
+                    body: JSON.stringify(bodyData),
                 });
 
                 if (!response.ok) {
@@ -585,7 +601,7 @@
                 console.error('Failed to add reply:', error);
                 showCustomAlert('Failed to add reply. ' + (error.message || '')); // Use custom modal
             }
-        }
+        });
 
         // Save posting hours settings
         savePostingHoursBtn.addEventListener('click', async () => {
@@ -648,7 +664,7 @@
 
         function showCustomConfirm(message, onConfirm) {
             const modalHtml = `
-                <div id="customConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                <div id="customConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity50 flex items-center justify-center z-50">
                     <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
                         <p class="text-lg text-gray-800 mb-4">${message}</p>
                         <div class="flex justify-end space-x-3">
