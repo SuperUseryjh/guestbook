@@ -415,10 +415,8 @@
                 // Filter out any malformed messages before rendering
                 const messages = rawMessages.filter(msg => 
                     typeof msg === 'object' && msg !== null &&
-                    typeof msg.id === 'string' &&
-                    (typeof msg.username === 'string' || msg.username === undefined) && // Allow undefined username
-                    (typeof msg.message === 'string' || msg.message === undefined) &&   // Allow undefined message
-                    (typeof msg.timestamp === 'number' || msg.timestamp === undefined)  // Allow undefined timestamp
+                    typeof msg.id === 'string' 
+                    // Relaxed filtering: rely on ?? for missing username, message, timestamp
                 );
 
                 // Sort by timestamp in descending order (latest first)
