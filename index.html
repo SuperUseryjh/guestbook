@@ -202,7 +202,8 @@
 
     <script>
         // Configure your Cloudflare Worker URL
-        const WORKER_URL = 'https://guest.mr-onion-blog.fun'; // <-- **PLEASE REPLACE WITH YOUR WORKER URL**
+        // IMPORTANT: Replace this with your actual Cloudflare Worker URL.
+        const WORKER_URL = 'https://guest.mr-onion-blog.fun'; 
 
         let isAdmin = localStorage.getItem('isAdmin') === 'true'; // Check admin status from local storage
         let postingStartTime; // Will be YYYY-MM-DDTHH:MM
@@ -243,6 +244,10 @@
         // Helper function: format timestamp
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
+            // Provide a fallback for invalid dates if timestamp is malformed
+            if (isNaN(date.getTime())) {
+                return '无效时间';
+            }
             return date.toLocaleString('zh-CN', {
                 year: 'numeric',
                 month: '2-digit',
@@ -304,10 +309,10 @@
                         <div class="message-header">
                             <div class="message-content-main">
                                 <p class="text-lg font-semibold text-gray-900">
-                                    ${msg.username ?? ''}
+                                    ${msg.username ?? '匿名用户'}
                                     ${msg.isAdminMessage ? '<span class="admin-message-badge">管理员</span>' : ''}
                                 </p>
-                                <p class="text-gray-700 mt-1">${msg.message ?? ''}</p>
+                                <p class="text-gray-700 mt-1">${msg.message ?? '无内容'}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
                             </div>
                             ${isAdmin ? `
@@ -323,10 +328,10 @@
                                     msg.replies.map(reply => `
                                         <div class="reply-card">
                                             <p class="font-medium text-gray-800">
-                                                ${reply.username ?? ''}
+                                                ${reply.username ?? '匿名用户'}
                                                 ${reply.isAdminReply ? '<span class="admin-reply-badge">管理员回复</span>' : ''}
                                             </p>
-                                            <p class="text-gray-700">${reply.message ?? ''}</p>
+                                            <p class="text-gray-700">${reply.message ?? '无内容'}</p>
                                             <p class="text-xs text-gray-500 mt-1">${formatTimestamp(reply.timestamp ?? 0)}</p>
                                         </div>
                                     `).join('')
@@ -411,17 +416,18 @@
                 const messages = rawMessages.filter(msg => 
                     typeof msg === 'object' && msg !== null &&
                     typeof msg.id === 'string' &&
-                    typeof msg.username === 'string' &&
-                    typeof msg.message === 'string' &&
-                    typeof msg.timestamp === 'number'
+                    (typeof msg.username === 'string' || msg.username === undefined) && // Allow undefined username
+                    (typeof msg.message === 'string' || msg.message === undefined) &&   // Allow undefined message
+                    (typeof msg.timestamp === 'number' || msg.timestamp === undefined)  // Allow undefined timestamp
                 );
 
                 // Sort by timestamp in descending order (latest first)
-                messages.sort((a, b) => b.timestamp - a.timestamp);
+                messages.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)); // Sort safely with default 0
+
                 renderMessages(messages);
             } catch (error) {
                 console.error('Failed to fetch messages:', error);
-                messagesContainer.innerHTML = `<p class="text-red-500 text-center">Failed to load messages.</p>`;
+                messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。</p>`;
             }
         }
 
@@ -499,7 +505,7 @@
 
         // Admin login
         adminLoginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
+            e.preventDefault(); // Prevent default form submission
             const password = adminPasswordInput.value;
 
             try {
@@ -539,6 +545,7 @@
             } finally {
                 adminPasswordInput.value = '';
             }
+            return false; // Ensure no further default action
         });
 
         // Admin logout
@@ -601,7 +608,7 @@
                 console.error('Failed to add reply:', error);
                 showCustomAlert('Failed to add reply. ' + (error.message || '')); // Use custom modal
             }
-        });
+        }
 
         // Save posting hours settings
         savePostingHoursBtn.addEventListener('click', async () => {
