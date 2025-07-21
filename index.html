@@ -221,7 +221,7 @@
 
     <!-- Developer Info Footer -->
     <footer class="mt-8 py-4 text-center text-gray-600 text-sm bg-gray-100">
-        <div class="mx-auto max-w-screen-lg px-4"> <!-- 调整为与body背景色一致，并确保内容居中 -->
+        <div class="mx-auto max-w-screen-lg px-4">
             <p>开发者信息：Mr_Onion</p>
             <p>联系邮箱：admin@mr-onion-blog.fun</p>
             <p>开发者首页：<a href="https://mr-onion-blog.fun" target="_blank" class="text-blue-600 hover:underline">Mr_Onion's Blog</a></p>
@@ -235,6 +235,7 @@
         const WORKER_URL = 'https://guest.mr-onion-blog.fun'; 
 
         let isAdmin = localStorage.getItem('isAdmin') === 'true'; // Check admin status from local storage
+        let adminSessionKey = localStorage.getItem('adminSessionKey'); // New: Store admin session key
         let postingStartTime; // Will be YYYY-MM-DDTHH:MM
         let postingEndTime;   // Will be YYYY-MM-DDTHH:MM
 
@@ -351,7 +352,8 @@
                                 </p>
                                 <p class="text-gray-700 mt-1">${msg.message ?? '无内容'}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
-                                ${msg.senderIp ? `<p class="text-xs text-gray-400 mt-1">IP: ${msg.senderIp}</p>` : ''}
+                                <!-- Only show IP if isAdmin is true -->
+                                ${isAdmin && msg.senderIp ? `<p class="text-xs text-gray-400 mt-1">IP: ${msg.senderIp}</p>` : ''}
                             </div>
                             ${isAdmin ? `
                                 <div class="admin-controls">
@@ -441,11 +443,29 @@
             }
         }
 
-        // Fetch messages
+        // Fetch messages (public or admin)
         async function fetchMessages() {
             try {
-                const response = await fetch(`${WORKER_URL}/messages`);
+                let response;
+                if (isAdmin && adminSessionKey) {
+                    // Admin fetches messages with IP
+                    response = await fetch(`${WORKER_URL}/admin/messages-with-ip`, {
+                        headers: {
+                            'X-Admin-Session': adminSessionKey
+                        }
+                    });
+                } else {
+                    // Public fetches messages without IP
+                    response = await fetch(`${WORKER_URL}/messages`);
+                }
+                
                 if (!response.ok) {
+                    // If admin session expired or invalid, log out
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout(); // Perform client-side logout
+                        return; // Stop further processing
+                    }
                     throw new Error(`HTTP Error! Status: ${response.status}`);
                 }
                 const rawMessages = await response.json();
@@ -513,8 +533,8 @@
                 const headers = { 'Content-Type': 'application/json' };
                 let bodyData = { username, message };
 
-                if (isAdmin) {
-                    headers['X-Admin-Token'] = 'true'; // If admin, send admin token
+                if (isAdmin && adminSessionKey) {
+                    headers['X-Admin-Session'] = adminSessionKey; // Use session key for admin post
                     bodyData.isAdminMessage = true; // Add isAdminMessage flag for admin's direct messages
                 }
 
@@ -525,6 +545,12 @@
                 });
 
                 if (!response.ok) {
+                    // If admin session expired or invalid, log out
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
@@ -559,18 +585,23 @@
                 const result = await response.json();
                 if (result.success) {
                     isAdmin = true;
+                    adminSessionKey = result.sessionKey; // Store the new session key
                     localStorage.setItem('isAdmin', 'true');
+                    localStorage.setItem('adminSessionKey', adminSessionKey); // Save session key to local storage
+
                     adminStatusText.textContent = '登录成功！';
                     adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
                     adminLogoutBtn.classList.remove('hidden');
                     adminLoginForm.classList.add('hidden'); // Hide login form
                     adminConfigSection.style.display = 'block'; // Show admin config section
-                    await fetchMessages(); // Refresh to show delete buttons
+                    await fetchMessages(); // Refresh to show delete buttons and IPs
                     await fetchConfig(); // Refresh config display
                     await fetchBannedIps(); // Fetch banned IPs on admin login
                 } else {
                     isAdmin = false;
+                    adminSessionKey = null; // Clear session key on failed login
                     localStorage.setItem('isAdmin', 'false');
+                    localStorage.removeItem('adminSessionKey');
                     adminStatusText.textContent = '密码错误。';
                     adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 }
@@ -585,17 +616,20 @@
         });
 
         // Admin logout
-        adminLogoutBtn.addEventListener('click', () => {
+        function adminLogout() { // Made into a function for reusability
             isAdmin = false;
-            localStorage.removeItem('isAdmin'); // 确保彻底清除状态
+            adminSessionKey = null;
+            localStorage.removeItem('isAdmin');
+            localStorage.removeItem('adminSessionKey'); // Clear session key from local storage
             adminStatusText.textContent = '已退出。';
             adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
             adminLogoutBtn.classList.add('hidden');
             adminLoginForm.classList.remove('hidden'); // Show login form
             adminConfigSection.style.display = 'none'; // Hide admin config section
-            fetchMessages(); // Refresh to hide delete buttons
+            fetchMessages(); // Refresh to hide delete buttons and IPs
             fetchConfig(); // Refresh config display
-        });
+        }
+        adminLogoutBtn.addEventListener('click', adminLogout); // Attach the function to the button
 
         // Delete message
         async function deleteMessage(id) {
@@ -604,11 +638,16 @@
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Token': 'true', // Simple token, Worker will check this
+                        'X-Admin-Session': adminSessionKey, // Use session key
                     },
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
@@ -624,8 +663,8 @@
         async function addReply(messageId, username, replyMessage, isAdminReply) {
             try {
                 const headers = { 'Content-Type': 'application/json' };
-                if (isAdminReply) {
-                    headers['X-Admin-Token'] = 'true'; // If admin reply, send admin token
+                if (isAdminReply && adminSessionKey) {
+                    headers['X-Admin-Session'] = adminSessionKey; // Use session key for admin reply
                 }
 
                 const response = await fetch(`${WORKER_URL}/messages/${messageId}/replies`, {
@@ -635,6 +674,11 @@
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
@@ -662,12 +706,17 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Token': 'true', // Must send admin token
+                        'X-Admin-Session': adminSessionKey, // Use session key
                     },
                     body: JSON.stringify({ postingStartTime: startTime, postingEndTime: endTime }),
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
@@ -692,16 +741,21 @@
 
         // Fetch banned IPs
         async function fetchBannedIps() {
-            if (!isAdmin) {
+            if (!isAdmin || !adminSessionKey) {
                 bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">请登录管理员账户以查看封禁IP列表。</p>';
                 return;
             }
             try {
                 bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">加载中...</p>';
                 const response = await fetch(`${WORKER_URL}/admin/banned-ips`, {
-                    headers: { 'X-Admin-Token': 'true' }
+                    headers: { 'X-Admin-Session': adminSessionKey } // Use session key
                 });
                 if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     throw new Error(`HTTP Error! Status: ${response.status}`);
                 }
                 const bannedIps = await response.json();
@@ -759,12 +813,17 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Token': 'true',
+                        'X-Admin-Session': adminSessionKey, // Use session key
                     },
                     body: JSON.stringify({ ip }),
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
@@ -793,12 +852,17 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Token': 'true',
+                        'X-Admin-Session': adminSessionKey, // Use session key
                     },
                     body: JSON.stringify({ ip }),
                 });
 
                 if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
@@ -861,6 +925,17 @@
 
         // Initialize: fetch messages and update admin status display
         document.addEventListener('DOMContentLoaded', () => {
+            // Check if adminSessionKey exists in localStorage and if isAdmin is true
+            if (localStorage.getItem('adminSessionKey') && localStorage.getItem('isAdmin') === 'true') {
+                isAdmin = true;
+                adminSessionKey = localStorage.getItem('adminSessionKey');
+            } else {
+                isAdmin = false;
+                adminSessionKey = null;
+                localStorage.removeItem('isAdmin'); // Ensure consistency
+                localStorage.removeItem('adminSessionKey'); // Ensure consistency
+            }
+
             fetchMessages();
             fetchConfig(); // Fetch config on page load
             if (isAdmin) {
