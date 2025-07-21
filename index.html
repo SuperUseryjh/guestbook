@@ -48,7 +48,9 @@
             flex-shrink: 0;
             margin-left: 1rem;
             display: flex; /* To align buttons horizontally */
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
             gap: 0.5rem; /* Spacing between buttons */
+            align-items: center; /* Vertically align items */
         }
         .btn {
             padding: 0.5rem 1rem;
@@ -138,9 +140,6 @@
             font-size: 0.75rem;
             font-weight: 600;
             margin-left: 0.5rem;
-            /* position: absolute; /* Optional: for absolute positioning */
-            /* top: 0.5rem; */
-            /* right: 0.5rem; */
         }
         .reply-form-container {
             margin-top: 1rem;
@@ -159,9 +158,72 @@
         .banned-ip-item:last-child {
             border-bottom: none;
         }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-content h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+        .modal-content p {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #555;
+            text-align: left;
+            margin-bottom: 1.5rem;
+            max-height: 200px; /* Limit height for scroll */
+            overflow-y: auto; /* Enable scroll if content overflows */
+            border: 1px solid #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            background-color: #f8fafc;
+        }
+        .modal-content button {
+            margin-top: 1rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
+    <!-- Usage Terms Modal -->
+    <div id="termsModal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>使用须知</h2>
+            <p>
+                欢迎使用留言板！为了维护良好的社区环境，请您在使用前仔细阅读以下须知：<br><br>
+                1. 请勿发布任何违法、色情、暴力、歧视、人身攻击或侵犯他人权益的内容。<br>
+                2. 请勿发布垃圾信息、广告或与本留言板主题无关的内容。<br>
+                3. 请尊重他人，文明交流，友善发言。<br>
+                4. 管理员有权删除不符合规定的留言，并对违规用户进行封禁处理。<br>
+                5. 您的IP地址将在您发布留言时被记录，以用于防止恶意行为和垃圾信息。<br>
+                6. 本留言板保留对本须知内容进行修改的权利，恕不另行通知。<br><br>
+                感谢您的理解与配合！
+            </p>
+            <button id="agreeTermsBtn" class="btn btn-primary w-full">我已阅读并同意</button>
+        </div>
+    </div>
+
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">留言板</h1>
 
@@ -253,16 +315,77 @@
     </footer>
 
     <script>
-        // Configure your Cloudflare Worker URL
-        // IMPORTANT: Replace this with your actual Cloudflare Worker URL.
+        // Cloudflare Worker URL - IMPORTANT: Replace this with your actual Cloudflare Worker URL.
         const WORKER_URL = 'https://guest.mr-onion-blog.fun'; 
 
-        let isAdmin = localStorage.getItem('isAdmin') === 'true'; // Check admin status from local storage
-        let adminSessionKey = localStorage.getItem('adminSessionKey'); // New: Store admin session key
-        let postingStartTime; // Will be YYYY-MM-DDTHH:MM
-        let postingEndTime;   // Will be YYYY-MM-DDTHH:MM
+        // Global state variables
+        let isAdmin = false;
+        let adminSessionKey = null;
+        let postingStartTime;
+        let postingEndTime;
 
-        // Helper to get current date in YYYY-MM-DD format
+        // DOM Elements
+        const elements = {
+            messagesContainer: document.getElementById('messagesContainer'),
+            messageForm: document.getElementById('messageForm'),
+            usernameInput: document.getElementById('username'),
+            messageInput: document.getElementById('message'),
+            adminLoginForm: document.getElementById('adminLoginForm'),
+            adminPasswordInput: document.getElementById('adminPassword'),
+            adminStatusText: document.getElementById('adminStatus'),
+            adminLogoutBtn: document.getElementById('adminLogoutBtn'),
+            noMessagesText: document.getElementById('noMessagesText'),
+            adminConfigSection: document.getElementById('adminConfigSection'),
+            setStartTimeInput: document.getElementById('setStartTime'),
+            setEndTimeInput: document.getElementById('setEndTime'),
+            savePostingHoursBtn: document.getElementById('savePostingHoursBtn'),
+            postingHoursStatusText: document.getElementById('postingHoursStatus'),
+            currentPostingHoursText: document.getElementById('currentPostingHours'),
+            ipAddressInput: document.getElementById('ipAddressInput'),
+            banIpBtn: document.getElementById('banIpBtn'),
+            unbanIpBtn: document.getElementById('unbanIpBtn'),
+            ipManagementStatus: document.getElementById('ipManagementStatus'),
+            bannedIpListContainer: document.getElementById('bannedIpList'),
+            termsModal: document.getElementById('termsModal'),
+            agreeTermsBtn: document.getElementById('agreeTermsBtn')
+        };
+
+        // --- Utility Functions ---
+
+        /**
+         * Formats a Unix timestamp into a human-readable date and time string.
+         * @param {number} timestamp - The Unix timestamp.
+         * @returns {string} Formatted date and time string.
+         */
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) {
+                return '无效时间';
+            }
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+        }
+
+        /**
+         * Escapes HTML characters and converts newlines to <br> tags.
+         * @param {string} text - The input text.
+         * @returns {string} Formatted HTML string.
+         */
+        function formatMessageContent(text) {
+            const escapedText = text.replace(/&/g, '&amp;')
+                                    .replace(/</g, '&lt;')
+                                    .replace(/>/g, '&gt;')
+                                    .replace(/"/g, '&quot;')
+                                    .replace(/'/g, '&#039;');
+            return escapedText.replace(/\n/g, '<br>');
+        }
+
+        /**
+         * Gets the current date formatted as YYYY-MM-DD.
+         * @returns {string} Current date string.
+         */
         function getCurrentDateFormatted() {
             const now = new Date();
             const year = now.getFullYear();
@@ -271,110 +394,404 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Default full date-time strings for "all day"
-        const defaultFullStartTime = `${getCurrentDateFormatted()}T00:00`;
-        const defaultFullEndTime = `${getCurrentDateFormatted()}T23:59`;
-
-        // Initialize with current date's start/end times
-        postingStartTime = defaultFullStartTime;
-        postingEndTime = defaultFullEndTime;
-
-
-        const messagesContainer = document.getElementById('messagesContainer');
-        const messageForm = document.getElementById('messageForm');
-        const adminLoginForm = document.getElementById('adminLoginForm');
-        const adminPasswordInput = document.getElementById('adminPassword');
-        const adminStatusText = document.getElementById('adminStatus');
-        const adminLogoutBtn = document.getElementById('adminLogoutBtn');
-        const noMessagesText = document.getElementById('noMessagesText');
-        const adminConfigSection = document.getElementById('adminConfigSection');
-        const setStartTimeInput = document.getElementById('setStartTime');
-        const setEndTimeInput = document.getElementById('setEndTime');
-        const savePostingHoursBtn = document.getElementById('savePostingHoursBtn');
-        const postingHoursStatusText = document.getElementById('postingHoursStatus');
-        const currentPostingHoursText = document.getElementById('currentPostingHours');
-
-        // IP Management elements
-        const ipAddressInput = document.getElementById('ipAddressInput');
-        const banIpBtn = document.getElementById('banIpBtn');
-        const unbanIpBtn = document.getElementById('unbanIpBtn');
-        const ipManagementStatus = document.getElementById('ipManagementStatus');
-        const bannedIpListContainer = document.getElementById('bannedIpList');
-
-
-        // Helper function: format timestamp
-        function formatTimestamp(timestamp) {
-            const date = new Date(timestamp);
-            // Provide a fallback for invalid dates if timestamp is malformed
-            if (isNaN(date.getTime())) {
-                return '无效时间';
-            }
-            return date.toLocaleString('zh-CN', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        }
-
-        // Helper function to escape HTML and convert newlines
-        function formatMessageContent(text) {
-            // Escape HTML characters to prevent XSS
-            const escapedText = text.replace(/&/g, '&amp;')
-                                    .replace(/</g, '&lt;')
-                                    .replace(/>/g, '&gt;')
-                                    .replace(/"/g, '&quot;')
-                                    .replace(/'/g, '&#039;');
-            // Convert newlines to <br> tags
-            return escapedText.replace(/\n/g, '<br>');
-        }
-
-        // Check if current time is within the allowed posting hours
+        /**
+         * Checks if the current time is within the allowed posting hours.
+         * @returns {boolean} True if within hours, false otherwise.
+         */
         function isCurrentTimeWithinHours() {
-            // Ensure postingStartTime and postingEndTime are valid date-time strings
             if (!postingStartTime || !postingEndTime) {
                 console.warn("Posting times not set, assuming always allowed.");
-                return true; // If times are not configured, assume always allowed
+                return true;
             }
-
             const now = new Date();
             const start = new Date(postingStartTime);
             const end = new Date(postingEndTime);
-
-            // Check for invalid Date objects (e.g., if parsing failed)
             if (isNaN(start.getTime()) || isNaN(end.getTime())) {
                 console.error("Invalid posting time configuration.");
-                return true; // Fallback to always allowed if config is invalid
+                return true;
             }
-
             return now.getTime() >= start.getTime() && now.getTime() <= end.getTime();
         }
 
-        // Update posting hours display
-        function updatePostingHoursDisplay() {
-            if (postingStartTime === defaultFullStartTime && postingEndTime === defaultFullEndTime) {
-                currentPostingHoursText.textContent = '当前发言时段：全天开放';
-            } else {
-                // Format for display: YYYY年MM月DD日 HH:MM
-                const startDisplay = new Date(postingStartTime).toLocaleString('zh-CN', {
-                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                });
-                const endDisplay = new Date(postingEndTime).toLocaleString('zh-CN', {
-                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                });
-                currentPostingHoursText.textContent = `当前发言时段：${startDisplay} ~ ${endDisplay}`;
+        /**
+         * Displays a custom alert modal.
+         * @param {string} message - The message to display.
+         */
+        function showCustomAlert(message) {
+            const modalHtml = `
+                <div id="customAlertModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                        <p class="text-lg text-gray-800 mb-4">${message}</p>
+                        <button id="customAlertCloseBtn" class="btn btn-primary w-full">确定</button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
+                document.getElementById('customAlertModal').remove();
+            });
+        }
+
+        /**
+         * Displays a custom confirmation modal.
+         * @param {string} message - The message to display.
+         * @param {Function} onConfirm - Callback function if user confirms.
+         */
+        function showCustomConfirm(message, onConfirm) {
+            const modalHtml = `
+                <div id="customConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                        <p class="text-lg text-gray-800 mb-4">${message}</p>
+                        <div class="flex justify-end space-x-3">
+                            <button id="customConfirmCancelBtn" class="btn btn-secondary">取消</button>
+                            <button id="customConfirmOkBtn" class="btn btn-danger">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            document.getElementById('customConfirmOkBtn').addEventListener('click', () => {
+                onConfirm();
+                document.getElementById('customConfirmModal').remove();
+            });
+            document.getElementById('customConfirmCancelBtn').addEventListener('click', () => {
+                document.getElementById('customConfirmModal').remove();
+            });
+        }
+
+        // --- API Interaction Functions ---
+
+        /**
+         * Fetches messages from the backend.
+         * @returns {Promise<Array>} List of messages.
+         */
+        async function fetchMessages() {
+            try {
+                let response;
+                if (isAdmin && adminSessionKey) {
+                    response = await fetch(`${WORKER_URL}/admin/messages-with-ip`, {
+                        headers: { 'X-Admin-Session': adminSessionKey }
+                    });
+                } else {
+                    response = await fetch(`${WORKER_URL}/messages`);
+                }
+                
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return [];
+                    }
+                    throw new Error(`HTTP Error! Status: ${response.status}`);
+                }
+                const rawMessages = await response.json();
+                return rawMessages.filter(msg => typeof msg === 'object' && msg !== null && typeof msg.id === 'string');
+            } catch (error) {
+                console.error('Failed to fetch messages:', error);
+                elements.messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。</p>`;
+                return [];
             }
         }
 
-        // Render message list
+        /**
+         * Fetches application configuration (posting hours) from the backend.
+         */
+        async function fetchConfig() {
+            try {
+                const response = await fetch(`${WORKER_URL}/config`);
+                if (!response.ok) {
+                    throw new Error(`HTTP Error! Status: ${response.status}`);
+                }
+                const config = await response.json();
+                postingStartTime = config.postingStartTime;
+                postingEndTime = config.postingEndTime;
+                updatePostingHoursDisplay();
+                if (isAdmin) {
+                    elements.setStartTimeInput.value = postingStartTime;
+                    elements.setEndTimeInput.value = postingEndTime;
+                }
+            } catch (error) {
+                console.error('Failed to fetch config:', error);
+                elements.postingHoursStatusText.textContent = 'Failed to fetch posting hours.';
+                elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                // Fallback to default full day if config fetch fails
+                postingStartTime = `${getCurrentDateFormatted()}T00:00`;
+                postingEndTime = `${getCurrentDateFormatted()}T23:59`;
+                updatePostingHoursDisplay(); 
+            }
+        }
+
+        /**
+         * Sends a message to the backend.
+         * @param {string} username - The message author's username.
+         * @param {string} message - The message content.
+         */
+        async function postMessage(username, message) {
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                let bodyData = { username, message };
+
+                if (isAdmin && adminSessionKey) {
+                    headers['X-Admin-Session'] = adminSessionKey;
+                    bodyData.isAdminMessage = true;
+                }
+
+                const response = await fetch(`${WORKER_URL}/messages`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(bodyData),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                elements.usernameInput.value = '';
+                elements.messageInput.value = '';
+                await updateUI(); // Refresh UI after successful post
+            } catch (error) {
+                console.error('Failed to submit message:', error);
+                showCustomAlert('Failed to submit message. ' + (error.message || ''));
+            }
+        }
+
+        /**
+         * Deletes a message.
+         * @param {string} id - The ID of the message to delete.
+         */
+        async function deleteMessage(id) {
+            try {
+                const response = await fetch(`${WORKER_URL}/messages/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Session': adminSessionKey,
+                    },
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                await updateUI(); // Refresh UI
+            } catch (error) {
+                console.error('Failed to delete message:', error);
+                showCustomAlert('Failed to delete message. ' + (error.message || ''));
+            }
+        }
+
+        /**
+         * Adds a reply to a message.
+         * @param {string} messageId - The ID of the message to reply to.
+         * @param {string} username - The reply author's username.
+         * @param {string} replyMessage - The reply content.
+         * @param {boolean} isAdminReply - True if the reply is from an admin.
+         */
+        async function addReply(messageId, username, replyMessage, isAdminReply) {
+            try {
+                const headers = { 'Content-Type': 'application/json' };
+                if (isAdminReply && adminSessionKey) {
+                    headers['X-Admin-Session'] = adminSessionKey;
+                }
+                const response = await fetch(`${WORKER_URL}/messages/${messageId}/replies`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ username, message: replyMessage, isAdminReply }),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                // Hide form and clear content
+                document.getElementById(`replyFormContainer-${messageId}`).classList.add('hidden');
+                document.getElementById(`replyUsername-${messageId}`).value = isAdmin ? '管理员' : '';
+                document.getElementById(`replyMessage-${messageId}`).value = '';
+                await updateUI(); // Refresh UI
+            } catch (error) {
+                console.error('Failed to add reply:', error);
+                showCustomAlert('Failed to add reply. ' + (error.message || ''));
+            }
+        }
+
+        /**
+         * Toggles the pinned status of a message.
+         * @param {string} messageId - The ID of the message.
+         * @param {boolean} isPinned - The new pinned status.
+         */
+        async function togglePinMessage(messageId, isPinned) {
+            try {
+                const payload = { id: messageId, isPinned: isPinned };
+                const response = await fetch(`${WORKER_URL}/admin/pin-message`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Session': adminSessionKey,
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                const result = await response.json();
+                if (result.success) {
+                    showCustomAlert(`留言 ${messageId} 已${isPinned ? '置顶' : '取消置顶'}。`);
+                    await updateUI(); // Refresh UI
+                } else {
+                    showCustomAlert(`操作失败: ${result.message || '未知错误'}`);
+                }
+            } catch (error) {
+                console.error('Failed to toggle pin status:', error);
+                showCustomAlert('操作失败。' + (error.message || ''));
+            }
+        }
+
+        /**
+         * Fetches the list of banned IP addresses.
+         * @returns {Promise<Array>} List of banned IPs.
+         */
+        async function fetchBannedIps() {
+            if (!isAdmin || !adminSessionKey) {
+                elements.bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">请登录管理员账户以查看封禁IP列表。</p>';
+                return [];
+            }
+            try {
+                elements.bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">加载中...</p>';
+                const response = await fetch(`${WORKER_URL}/admin/banned-ips`, {
+                    headers: { 'X-Admin-Session': adminSessionKey }
+                });
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return [];
+                    }
+                    throw new Error(`HTTP Error! Status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Failed to fetch banned IPs:', error);
+                elements.bannedIpListContainer.innerHTML = `<p class="text-red-500 text-center text-sm">加载封禁IP失败。</p>`;
+                return [];
+            }
+        }
+
+        /**
+         * Bans an IP address.
+         * @param {string} ip - The IP address to ban.
+         */
+        async function banIp(ip) {
+            try {
+                const response = await fetch(`${WORKER_URL}/admin/ban-ip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Session': adminSessionKey,
+                    },
+                    body: JSON.stringify({ ip }),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                const result = await response.json();
+                if (result.success) {
+                    elements.ipManagementStatus.textContent = `IP ${ip} 封禁成功！`;
+                    elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-green-600';
+                    elements.ipAddressInput.value = '';
+                    await renderBannedIpsList(); // Re-render banned IP list
+                } else {
+                    elements.ipManagementStatus.textContent = `封禁 IP 失败: ${result.message || '未知错误'}`;
+                    elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+                }
+            } catch (error) {
+                console.error('Failed to ban IP:', error);
+                elements.ipManagementStatus.textContent = '封禁 IP 请求失败。' + (error.message || '');
+                elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+            }
+        }
+
+        /**
+         * Unbans an IP address.
+         * @param {string} ip - The IP address to unban.
+         */
+        async function unbanIp(ip) {
+            try {
+                const response = await fetch(`${WORKER_URL}/admin/unban-ip`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Session': adminSessionKey,
+                    },
+                    body: JSON.stringify({ ip }),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+                const result = await response.json();
+                if (result.success) {
+                    elements.ipManagementStatus.textContent = `IP ${ip} 解封成功！`;
+                    elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-green-600';
+                    await renderBannedIpsList(); // Re-render banned IP list
+                } else {
+                    elements.ipManagementStatus.textContent = `解封 IP 失败: ${result.message || '未知错误'}`;
+                    elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+                }
+            } catch (error) {
+                console.error('Failed to unban IP:', error);
+                elements.ipManagementStatus.textContent = '解封 IP 请求失败。' + (error.message || '');
+                elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+            }
+        }
+
+        // --- UI Rendering Functions ---
+
+        /**
+         * Renders the list of messages.
+         * @param {Array} messages - The array of message objects.
+         */
         function renderMessages(messages) {
-            messagesContainer.innerHTML = ''; // Clear existing messages
+            elements.messagesContainer.innerHTML = '';
             if (messages.length === 0) {
-                noMessagesText.style.display = 'block';
+                elements.noMessagesText.style.display = 'block';
             } else {
-                noMessagesText.style.display = 'none';
+                elements.noMessagesText.style.display = 'none';
                 messages.forEach(msg => {
                     const messageCard = document.createElement('div');
                     messageCard.className = 'message-card';
@@ -388,7 +805,6 @@
                                 </p>
                                 <p class="text-gray-700 mt-1">${formatMessageContent(msg.message ?? '无内容')}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
-                                <!-- Only show IP if isAdmin is true -->
                                 ${isAdmin && msg.senderIp ? `<p class="text-xs text-gray-400 mt-1">IP: ${msg.senderIp}</p>` : ''}
                             </div>
                             ${isAdmin ? `
@@ -434,322 +850,167 @@
                             </div>
                         </div>
                     `;
-                    messagesContainer.appendChild(messageCard);
+                    elements.messagesContainer.appendChild(messageCard);
                 });
-
-                // Add event listeners for delete buttons (if admin is logged in)
-                if (isAdmin) {
-                    document.querySelectorAll('.delete-btn').forEach(button => {
-                        button.addEventListener('click', async (e) => {
-                            const messageId = e.target.dataset.id;
-                            // Use custom modal instead of alert() and confirm()
-                            showCustomConfirm('确定要删除这条留言吗？', async () => {
-                                await deleteMessage(messageId);
-                            });
-                        });
-                    });
-                    // Add event listeners for pin/unpin buttons
-                    document.querySelectorAll('.pin-toggle-btn').forEach(button => {
-                        button.addEventListener('click', async (e) => {
-                            const messageId = e.target.dataset.id;
-                            const isCurrentlyPinned = e.target.dataset.pinned === 'true';
-                            await togglePinMessage(messageId, !isCurrentlyPinned);
-                        });
-                    });
-                }
-
-                // Add event listeners for reply buttons
-                document.querySelectorAll('.toggle-reply-form').forEach(button => {
-                    button.addEventListener('click', (e) => {
-                        const messageId = e.target.dataset.id;
-                        const replyFormContainer = document.getElementById(`replyFormContainer-${messageId}`);
-                        replyFormContainer.classList.toggle('hidden');
-                        // If admin, auto-fill username
-                        if (isAdmin) {
-                            document.getElementById(`replyUsername-${messageId}`).value = '管理员';
-                        }
-                    });
-                });
-
-                // Add event listeners for reply forms
-                document.querySelectorAll('.reply-form').forEach(form => {
-                    form.addEventListener('submit', async (e) => {
-                        e.preventDefault();
-                        const messageId = e.target.dataset.id;
-                        const replyUsername = document.getElementById(`replyUsername-${messageId}`).value;
-                        const replyMessage = document.getElementById(`replyMessage-${messageId}`).value;
-
-                        await addReply(messageId, replyUsername, replyMessage, isAdmin);
-
-                        // Hide form and clear content
-                        document.getElementById(`replyFormContainer-${messageId}`).classList.add('hidden');
-                        document.getElementById(`replyUsername-${messageId}`).value = isAdmin ? '管理员' : '';
-                        document.getElementById(`replyMessage-${messageId}`).value = '';
-                    });
-                });
+                setupMessageEventListeners();
             }
         }
 
-        // Fetch messages (public or admin)
-        async function fetchMessages() {
-            try {
-                let response;
-                if (isAdmin && adminSessionKey) {
-                    // Admin fetches messages with IP
-                    response = await fetch(`${WORKER_URL}/admin/messages-with-ip`, {
-                        headers: {
-                            'X-Admin-Session': adminSessionKey
-                        }
-                    });
-                } else {
-                    // Public fetches messages without IP
-                    response = await fetch(`${WORKER_URL}/messages`);
-                }
-                
-                if (!response.ok) {
-                    // If admin session expired or invalid, log out
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout(); // Perform client-side logout
-                        return; // Stop further processing
-                    }
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
-                }
-                const rawMessages = await response.json();
-                
-                // Filter out any malformed messages before rendering
-                const messages = rawMessages.filter(msg => 
-                    typeof msg === 'object' && msg !== null &&
-                    typeof msg.id === 'string' 
-                );
-
-                // Sorting logic is now handled by the backend.
-                // messages.sort((a, b) => {
-                //     if (a.isPinned && !b.isPinned) return -1;
-                //     if (!a.isPinned && b.isPinned) return 1;
-                //     return (b.timestamp ?? 0) - (a.timestamp ?? 0);
-                // });
-
-                renderMessages(messages);
-            } catch (error) {
-                console.error('Failed to fetch messages:', error);
-                messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。</p>`;
+        /**
+         * Renders the list of banned IP addresses.
+         * @param {Array} ips - The array of banned IP strings.
+         */
+        function renderBannedIps(ips) {
+            elements.bannedIpListContainer.innerHTML = '';
+            if (ips.length === 0) {
+                elements.bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">暂无封禁IP。</p>';
+            } else {
+                ips.forEach(ip => {
+                    const ipItem = document.createElement('div');
+                    ipItem.className = 'banned-ip-item';
+                    ipItem.innerHTML = `
+                        <span class="text-gray-800">${ip}</span>
+                        <button class="btn btn-secondary text-xs unban-ip-btn" data-ip="${ip}">解封</button>
+                    `;
+                    elements.bannedIpListContainer.appendChild(ipItem);
+                });
+                setupBannedIpEventListeners();
             }
         }
 
-        // Fetch configuration (posting hours)
-        async function fetchConfig() {
-            try {
-                const response = await fetch(`${WORKER_URL}/config`);
-                if (!response.ok) {
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
-                }
-                const config = await response.json();
-                postingStartTime = config.postingStartTime || defaultFullStartTime;
-                postingEndTime = config.postingEndTime || defaultFullEndTime;
-                updatePostingHoursDisplay();
-                if (isAdmin) {
-                    setStartTimeInput.value = postingStartTime;
-                    setEndTimeInput.value = postingEndTime;
-                }
-            } catch (error) {
-                console.error('Failed to fetch config:', error);
-                postingHoursStatusText.textContent = 'Failed to fetch posting hours.';
-                postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
-                updatePostingHoursDisplay(); // Keep default display
+        /**
+         * Updates the display of current posting hours.
+         */
+        function updatePostingHoursDisplay() {
+            const defaultFullStartTime = `${getCurrentDateFormatted()}T00:00`;
+            const defaultFullEndTime = `${getCurrentDateFormatted()}T23:59`;
+
+            if (postingStartTime === defaultFullStartTime && postingEndTime === defaultFullEndTime) {
+                elements.currentPostingHoursText.textContent = '当前发言时段：全天开放';
+            } else {
+                const startDisplay = new Date(postingStartTime).toLocaleString('zh-CN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+                const endDisplay = new Date(postingEndTime).toLocaleString('zh-CN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+                elements.currentPostingHoursText.textContent = `当前发言时段：${startDisplay} ~ ${endDisplay}`;
             }
         }
 
-        // Submit message
-        messageForm.addEventListener('submit', async (e) => {
+        /**
+         * Shows the terms and conditions modal.
+         */
+        function showTermsModal() {
+            elements.termsModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Disable scrolling on body
+        }
+
+        /**
+         * Hides the terms and conditions modal.
+         */
+        function hideTermsModal() {
+            elements.termsModal.classList.add('hidden');
+            document.body.style.overflow = ''; // Re-enable scrolling on body
+        }
+
+        // --- Event Handlers ---
+
+        /**
+         * Handles message form submission.
+         * @param {Event} e - The submit event.
+         */
+        async function handleMessageSubmit(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const message = document.getElementById('message').value;
+            const username = elements.usernameInput.value;
+            const message = elements.messageInput.value;
 
-            // For non-admin users, check posting hours
-            if (!isAdmin) {
-                if (!isCurrentTimeWithinHours()) {
-                    const startDisplay = new Date(postingStartTime).toLocaleString('zh-CN', {
-                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                    });
-                    const endDisplay = new Date(postingEndTime).toLocaleString('zh-CN', {
-                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-                    });
-                    showCustomAlert(`当前不在允许的发言时段内。发言时段：${startDisplay} ~ ${endDisplay}`);
-                    return; // Prevent form submission
-                }
-            }
-
-            try {
-                const headers = { 'Content-Type': 'application/json' };
-                let bodyData = { username, message };
-
-                if (isAdmin && adminSessionKey) {
-                    headers['X-Admin-Session'] = adminSessionKey; // Use session key for admin post
-                    bodyData.isAdminMessage = true; // Add isAdminMessage flag for admin's direct messages
-                    // No isPinned for new messages from frontend, only via explicit pin button
-                }
-
-                const response = await fetch(`${WORKER_URL}/messages`, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(bodyData),
+            if (!isAdmin && !isCurrentTimeWithinHours()) {
+                const startDisplay = new Date(postingStartTime).toLocaleString('zh-CN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                 });
-
-                if (!response.ok) {
-                    // If admin session expired or invalid, log out
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                document.getElementById('username').value = '';
-                document.getElementById('message').value = '';
-                await fetchMessages(); // Refresh message list
-            } catch (error) {
-                console.error('Failed to submit message:', error);
-                showCustomAlert('Failed to submit message. ' + (error.message || '')); // Use custom modal
+                const endDisplay = new Date(postingEndTime).toLocaleString('zh-CN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                });
+                showCustomAlert(`当前不在允许的发言时段内。发言时段：${startDisplay} ~ ${endDisplay}`);
+                return;
             }
-        });
+            await postMessage(username, message);
+        }
 
-        // Admin login
-        adminLoginForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevent default form submission
-            const password = adminPasswordInput.value;
+        /**
+         * Handles admin login form submission.
+         * @param {Event} e - The submit event.
+         */
+        async function handleAdminLogin(e) {
+            e.preventDefault();
+            const password = elements.adminPasswordInput.value;
 
             try {
                 const response = await fetch(`${WORKER_URL}/admin/login`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password }),
                 });
 
                 if (!response.ok) {
                     throw new Error(`HTTP Error! Status: ${response.status}`);
                 }
-
                 const result = await response.json();
                 if (result.success) {
                     isAdmin = true;
-                    adminSessionKey = result.sessionKey; // Store the new session key
+                    adminSessionKey = result.sessionKey;
                     localStorage.setItem('isAdmin', 'true');
-                    localStorage.setItem('adminSessionKey', adminSessionKey); // Save session key to local storage
-
-                    adminStatusText.textContent = '登录成功！';
-                    adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
-                    adminLogoutBtn.classList.remove('hidden');
-                    adminLoginForm.classList.add('hidden'); // Hide login form
-                    adminConfigSection.style.display = 'block'; // Show admin config section
-                    await fetchMessages(); // Refresh to show delete buttons and IPs
-                    await fetchConfig(); // Refresh config display
-                    await fetchBannedIps(); // Fetch banned IPs on admin login
+                    localStorage.setItem('adminSessionKey', adminSessionKey);
+                    elements.adminStatusText.textContent = '登录成功！';
+                    elements.adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
+                    elements.adminLogoutBtn.classList.remove('hidden');
+                    elements.adminLoginForm.classList.add('hidden');
+                    elements.adminConfigSection.style.display = 'block';
+                    await updateUI(); // Refresh UI after login
                 } else {
                     isAdmin = false;
-                    adminSessionKey = null; // Clear session key on failed login
+                    adminSessionKey = null;
                     localStorage.setItem('isAdmin', 'false');
                     localStorage.removeItem('adminSessionKey');
-                    adminStatusText.textContent = '密码错误。';
-                    adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                    elements.adminStatusText.textContent = '密码错误。';
+                    elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 }
             } catch (error) {
                 console.error('Admin login failed:', error);
-                adminStatusText.textContent = '登录请求失败。';
-                adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                elements.adminStatusText.textContent = '登录请求失败。';
+                elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
             } finally {
-                adminPasswordInput.value = '';
+                elements.adminPasswordInput.value = '';
             }
-            return false; // Ensure no further default action
-        });
+        }
 
-        // Admin logout
-        function adminLogout() { // Made into a function for reusability
+        /**
+         * Handles admin logout.
+         */
+        function adminLogout() {
             isAdmin = false;
             adminSessionKey = null;
             localStorage.removeItem('isAdmin');
-            localStorage.removeItem('adminSessionKey'); // Clear session key from local storage
-            adminStatusText.textContent = '已退出。';
-            adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
-            adminLogoutBtn.classList.add('hidden');
-            adminLoginForm.classList.remove('hidden'); // Show login form
-            adminConfigSection.style.display = 'none'; // Hide admin config section
-            fetchMessages(); // Refresh to hide delete buttons and IPs
-            fetchConfig(); // Refresh config display
-        }
-        adminLogoutBtn.addEventListener('click', adminLogout); // Attach the function to the button
-
-        // Delete message
-        async function deleteMessage(id) {
-            try {
-                const response = await fetch(`${WORKER_URL}/messages/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey, // Use session key
-                    },
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                await fetchMessages(); // Refresh message list
-            } catch (error) {
-                console.error('Failed to delete message:', error);
-                showCustomAlert('Failed to delete message. ' + (error.message || '')); // Use custom modal
-            }
+            localStorage.removeItem('adminSessionKey');
+            elements.adminStatusText.textContent = '已退出。';
+            elements.adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
+            elements.adminLogoutBtn.classList.add('hidden');
+            elements.adminLoginForm.classList.remove('hidden');
+            elements.adminConfigSection.style.display = 'none';
+            updateUI(); // Refresh UI
         }
 
-        // Add reply
-        async function addReply(messageId, username, replyMessage, isAdminReply) {
-            try {
-                const headers = { 'Content-Type': 'application/json' };
-                if (isAdminReply && adminSessionKey) {
-                    headers['X-Admin-Session'] = adminSessionKey; // Use session key for admin reply
-                }
-
-                const response = await fetch(`${WORKER_URL}/messages/${messageId}/replies`, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify({ username, message: replyMessage, isAdminReply }),
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                await fetchMessages(); // Refresh message list to show new reply
-            } catch (error) {
-                console.error('Failed to add reply:', error);
-                showCustomAlert('Failed to add reply. ' + (error.message || '')); // Use custom modal
-            }
-        }
-
-        // Save posting hours settings
-        savePostingHoursBtn.addEventListener('click', async () => {
-            const startTime = setStartTimeInput.value;
-            const endTime = setEndTimeInput.value;
+        /**
+         * Handles saving posting hours settings.
+         */
+        async function handleSavePostingHours() {
+            const startTime = elements.setStartTimeInput.value;
+            const endTime = elements.setEndTimeInput.value;
 
             if (!startTime || !endTime) {
-                postingHoursStatusText.textContent = '请填写开始时间和结束时间。';
-                postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                elements.postingHoursStatusText.textContent = '请填写开始时间和结束时间。';
+                elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 return;
             }
 
@@ -758,7 +1019,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey, // Use session key
+                        'X-Admin-Session': adminSessionKey,
                     },
                     body: JSON.stringify({ postingStartTime: startTime, postingEndTime: endTime }),
                 });
@@ -772,272 +1033,191 @@
                     const errorText = await response.text();
                     throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
-
                 const result = await response.json();
                 if (result.success) {
-                    postingHoursStatusText.textContent = '发言时段设置成功！';
-                    postingHoursStatusText.className = 'text-center mt-4 text-sm text-green-600';
-                    await fetchConfig(); // Refresh posting hours display on page
+                    elements.postingHoursStatusText.textContent = '发言时段设置成功！';
+                    elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-green-600';
+                    await fetchConfig(); // Refresh posting hours display
                 } else {
-                    postingHoursStatusText.textContent = '设置失败。';
-                    postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                    elements.postingHoursStatusText.textContent = '设置失败。';
+                    elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 }
             } catch (error) {
                 console.error('Failed to save posting hours:', error);
-                postingHoursStatusText.textContent = 'Failed to save posting hours. ' + (error.message || '');
-                postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
-            }
-        });
-
-        // --- IP Management Functions ---
-
-        // Fetch banned IPs
-        async function fetchBannedIps() {
-            if (!isAdmin || !adminSessionKey) {
-                bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">请登录管理员账户以查看封禁IP列表。</p>';
-                return;
-            }
-            try {
-                bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">加载中...</p>';
-                const response = await fetch(`${WORKER_URL}/admin/banned-ips`, {
-                    headers: { 'X-Admin-Session': adminSessionKey } // Use session key
-                });
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
-                }
-                const bannedIps = await response.json();
-                renderBannedIps(bannedIps);
-            } catch (error) {
-                console.error('Failed to fetch banned IPs:', error);
-                bannedIpListContainer.innerHTML = `<p class="text-red-500 text-center text-sm">加载封禁IP失败。</p>`;
+                elements.postingHoursStatusText.textContent = 'Failed to save posting hours. ' + (error.message || '');
+                elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
             }
         }
 
-        // Render banned IPs
-        function renderBannedIps(ips) {
-            bannedIpListContainer.innerHTML = '';
-            if (ips.length === 0) {
-                bannedIpListContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">暂无封禁IP。</p>';
-            } else {
-                ips.forEach(ip => {
-                    const ipItem = document.createElement('div');
-                    ipItem.className = 'banned-ip-item';
-                    ipItem.innerHTML = `
-                        <span class="text-gray-800">${ip}</span>
-                        <button class="btn btn-secondary text-xs unban-ip-btn" data-ip="${ip}">解封</button>
-                    `;
-                    bannedIpListContainer.appendChild(ipItem);
-                });
+        /**
+         * Handles banning an IP address.
+         */
+        async function handleBanIp() {
+            const ip = elements.ipAddressInput.value.trim();
+            if (!ip || !elements.ipAddressInput.checkValidity()) {
+                elements.ipManagementStatus.textContent = elements.ipAddressInput.title || '请输入有效的IP地址。';
+                elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+                return;
+            }
+            await banIp(ip);
+        }
 
-                // Add event listeners for unban buttons
-                document.querySelectorAll('.unban-ip-btn').forEach(button => {
-                    button.addEventListener('click', async (e) => {
-                        const ipToUnban = e.target.dataset.ip;
-                        showCustomConfirm(`确定要解封 IP: ${ipToUnban} 吗？`, async () => {
-                            await unbanIp(ipToUnban);
+        /**
+         * Handles unbanning an IP address.
+         */
+        async function handleUnbanIp() {
+            const ip = elements.ipAddressInput.value.trim();
+            if (!ip || !elements.ipAddressInput.checkValidity()) {
+                elements.ipManagementStatus.textContent = elements.ipAddressInput.title || '请输入有效的IP地址。';
+                elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+                return;
+            }
+            await unbanIp(ip);
+        }
+
+        // --- Event Listener Setup Functions ---
+
+        /**
+         * Sets up event listeners for message-related buttons (delete, pin/unpin, reply).
+         */
+        function setupMessageEventListeners() {
+            if (isAdmin) {
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const messageId = e.target.dataset.id;
+                        showCustomConfirm('确定要删除这条留言吗？', async () => {
+                            await deleteMessage(messageId);
                         });
                     });
                 });
-            }
-        }
-
-        // Ban IP
-        banIpBtn.addEventListener('click', async () => {
-            const ip = ipAddressInput.value.trim();
-            if (!ip) {
-                ipManagementStatus.textContent = '请输入 IP 地址。';
-                ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
-                return;
-            }
-            if (!ipAddressInput.checkValidity()) {
-                ipManagementStatus.textContent = ipAddressInput.title;
-                ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
-                return;
-            }
-
-            try {
-                const response = await fetch(`${WORKER_URL}/admin/ban-ip`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey, // Use session key
-                    },
-                    body: JSON.stringify({ ip }),
+                document.querySelectorAll('.pin-toggle-btn').forEach(button => {
+                    button.addEventListener('click', async (e) => {
+                        const messageId = e.target.dataset.id;
+                        const isCurrentlyPinned = e.target.dataset.pinned === 'true';
+                        await togglePinMessage(messageId, !isCurrentlyPinned);
+                    });
                 });
-
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    ipManagementStatus.textContent = `IP ${ip} 封禁成功！`;
-                    ipManagementStatus.className = 'text-center mt-2 text-sm text-green-600';
-                    ipAddressInput.value = '';
-                    await fetchBannedIps();
-                } else {
-                    ipManagementStatus.textContent = `封禁 IP 失败: ${result.message || '未知错误'}`;
-                    ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
-                }
-            } catch (error) {
-                console.error('Failed to ban IP:', error);
-                ipManagementStatus.textContent = '封禁 IP 请求失败。' + (error.message || '');
-                ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
             }
-        });
-
-        // Unban IP
-        async function unbanIp(ip) {
-            try {
-                const response = await fetch(`${WORKER_URL}/admin/unban-ip`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey, // Use session key
-                    },
-                    body: JSON.stringify({ ip }),
+            document.querySelectorAll('.toggle-reply-form').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const messageId = e.target.dataset.id;
+                    const replyFormContainer = document.getElementById(`replyFormContainer-${messageId}`);
+                    replyFormContainer.classList.toggle('hidden');
+                    if (isAdmin) {
+                        document.getElementById(`replyUsername-${messageId}`).value = '管理员';
+                    }
                 });
-
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    ipManagementStatus.textContent = `IP ${ip} 解封成功！`;
-                    ipManagementStatus.className = 'text-center mt-2 text-sm text-green-600';
-                    await fetchBannedIps();
-                } else {
-                    ipManagementStatus.textContent = `解封 IP 失败: ${result.message || '未知错误'}`;
-                    ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
-                }
-            } catch (error) {
-                console.error('Failed to unban IP:', error);
-                ipManagementStatus.textContent = '解封 IP 请求失败。' + (error.message || '');
-                ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
-            }
-        }
-
-        // --- Pin/Unpin Message Function ---
-        async function togglePinMessage(messageId, isPinned) {
-            try {
-                const response = await fetch(`${WORKER_URL}/admin/pin-message`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey,
-                    },
-                    body: JSON.stringify({ id: messageId, isPinned: isPinned }),
+            });
+            document.querySelectorAll('.reply-form').forEach(form => {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const messageId = e.target.dataset.id;
+                    const replyUsername = document.getElementById(`replyUsername-${messageId}`).value;
+                    const replyMessage = document.getElementById(`replyMessage-${messageId}`).value;
+                    await addReply(messageId, replyUsername, replyMessage, isAdmin);
                 });
-
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    showCustomAlert(`留言 ${messageId} 已${isPinned ? '置顶' : '取消置顶'}。`);
-                    await fetchMessages(); // Re-fetch messages to update order and button text
-                } else {
-                    showCustomAlert(`操作失败: ${result.message || '未知错误'}`);
-                }
-            } catch (error) {
-                console.error('Failed to toggle pin status:', error);
-                showCustomAlert('操作失败。' + (error.message || ''));
-            }
-        }
-
-        // Custom modal functions (replacing alert and confirm)
-        function showCustomAlert(message) {
-            const modalHtml = `
-                <div id="customAlertModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                        <p class="text-lg text-gray-800 mb-4">${message}</p>
-                        <button id="customAlertCloseBtn" class="btn btn-primary w-full">确定</button>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            document.getElementById('customAlertCloseBtn').addEventListener('click', () => {
-                document.getElementById('customAlertModal').remove();
             });
         }
 
-        function showCustomConfirm(message, onConfirm) {
-            const modalHtml = `
-                <div id="customConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity50 flex items-center justify-center z-50">
-                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                        <p class="text-lg text-gray-800 mb-4">${message}</p>
-                        <div class="flex justify-end space-x-3">
-                            <button id="customConfirmCancelBtn" class="btn btn-secondary">取消</button>
-                            <button id="customConfirmOkBtn" class="btn btn-danger">确定</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-            document.getElementById('customConfirmOkBtn').addEventListener('click', () => {
-                onConfirm();
-                document.getElementById('customConfirmModal').remove();
-            });
-            document.getElementById('customConfirmCancelBtn').addEventListener('click', () => {
-                document.getElementById('customConfirmModal').remove();
+        /**
+         * Sets up event listeners for banned IP list buttons.
+         */
+        function setupBannedIpEventListeners() {
+            document.querySelectorAll('.unban-ip-btn').forEach(button => {
+                button.addEventListener('click', async (e) => {
+                    const ipToUnban = e.target.dataset.ip;
+                    showCustomConfirm(`确定要解封 IP: ${ipToUnban} 吗？`, async () => {
+                        await unbanIp(ipToUnban);
+                    });
+                });
             });
         }
 
+        /**
+         * Attaches all primary event listeners.
+         */
+        function attachGlobalEventListeners() {
+            elements.messageForm.addEventListener('submit', handleMessageSubmit);
+            elements.adminLoginForm.addEventListener('submit', handleAdminLogin);
+            elements.adminLogoutBtn.addEventListener('click', adminLogout);
+            elements.savePostingHoursBtn.addEventListener('click', handleSavePostingHours);
+            elements.banIpBtn.addEventListener('click', handleBanIp);
+            elements.unbanIpBtn.addEventListener('click', handleUnbanIp);
+            elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement);
+        }
 
-        // Initialize: fetch messages and update admin status display
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check if adminSessionKey exists in localStorage and if isAdmin is true
-            if (localStorage.getItem('adminSessionKey') && localStorage.getItem('isAdmin') === 'true') {
-                isAdmin = true;
-                adminSessionKey = localStorage.getItem('adminSessionKey');
+        // --- Core Application Logic ---
+
+        /**
+         * Performs a full UI update by fetching latest data and re-rendering.
+         */
+        async function updateUI() {
+            const messages = await fetchMessages();
+            renderMessages(messages);
+            await fetchConfig();
+            if (isAdmin) {
+                const bannedIps = await fetchBannedIps();
+                renderBannedIps(bannedIps);
+            }
+            updateAdminSectionVisibility();
+        }
+
+        /**
+         * Updates the visibility of admin-only sections based on isAdmin status.
+         */
+        function updateAdminSectionVisibility() {
+            if (isAdmin) {
+                elements.adminStatusText.textContent = '已登录为管理员。';
+                elements.adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
+                elements.adminLogoutBtn.classList.remove('hidden');
+                elements.adminLoginForm.classList.add('hidden');
+                elements.adminConfigSection.style.display = 'block';
             } else {
+                elements.adminStatusText.textContent = '未登录管理员。';
+                elements.adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
+                elements.adminLogoutBtn.classList.add('hidden');
+                elements.adminLoginForm.classList.remove('hidden');
+                elements.adminConfigSection.style.display = 'none';
+            }
+        }
+
+        /**
+         * Handles the user agreeing to terms.
+         */
+        function handleTermsAgreement() {
+            localStorage.setItem('termsAgreed', 'true');
+            hideTermsModal();
+            initializeGuestbook();
+        }
+
+        /**
+         * Initializes the guestbook application.
+         * Checks admin status, fetches data, and sets up UI.
+         */
+        function initializeGuestbook() {
+            // Check admin status from local storage
+            isAdmin = localStorage.getItem('isAdmin') === 'true';
+            adminSessionKey = localStorage.getItem('adminSessionKey');
+            if (!isAdmin || !adminSessionKey) { // If not admin or session key missing/invalid, reset
                 isAdmin = false;
                 adminSessionKey = null;
-                localStorage.removeItem('isAdmin'); // Ensure consistency
-                localStorage.removeItem('adminSessionKey'); // Ensure consistency
+                localStorage.removeItem('isAdmin');
+                localStorage.removeItem('adminSessionKey');
             }
+            
+            // Note: attachGlobalEventListeners is now called directly in DOMContentLoaded
+            updateUI(); // Initial UI render and data fetch
+        }
 
-            fetchMessages();
-            fetchConfig(); // Fetch config on page load
-            if (isAdmin) {
-                adminStatusText.textContent = '已登录为管理员。';
-                adminStatusText.className = 'text-center mt-4 text-sm text-green-600';
-                adminLogoutBtn.classList.remove('hidden');
-                adminLoginForm.classList.add('hidden');
-                adminConfigSection.style.display = 'block'; // Show admin config section
-                fetchBannedIps(); // Fetch banned IPs if admin is already logged in
+        // --- Initial Load Logic ---
+        document.addEventListener('DOMContentLoaded', () => {
+            attachGlobalEventListeners(); // 确保所有事件监听器在DOM加载后立即绑定
+
+            const termsAgreed = localStorage.getItem('termsAgreed');
+            if (!termsAgreed) {
+                showTermsModal();
             } else {
-                adminStatusText.textContent = '未登录管理员。';
-                adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
-                adminLogoutBtn.classList.add('hidden');
-                adminLoginForm.classList.remove('hidden');
-                adminConfigSection.style.display = 'none'; // Hide admin config section
+                initializeGuestbook(); // 如果已经同意条款，则直接初始化
             }
         });
     </script>
