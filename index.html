@@ -48,16 +48,7 @@
             flex-shrink: 0;
             margin-left: 1rem;
             display: flex; /* To align buttons horizontally */
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
             gap: 0.5rem; /* Spacing between buttons */
-            align-items: center; /* Vertically align items */
-        }
-        .admin-controls .priority-input {
-            width: 60px; /* Adjust width as needed */
-            padding: 0.25rem 0.5rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
         }
         .btn {
             padding: 0.5rem 1rem;
@@ -393,7 +384,7 @@
                                 <p class="text-lg font-semibold text-gray-900">
                                     ${msg.username ?? '匿名用户'}
                                     ${msg.isAdminMessage ? '<span class="admin-message-badge">管理员</span>' : ''}
-                                    ${msg.isPinned ? `<span class="pinned-badge">置顶${msg.priority !== undefined ? ` (P${msg.priority})` : ''}</span>` : ''}
+                                    ${msg.isPinned ? '<span class="pinned-badge">置顶</span>' : ''}
                                 </p>
                                 <p class="text-gray-700 mt-1">${formatMessageContent(msg.message ?? '无内容')}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
@@ -403,17 +394,9 @@
                             ${isAdmin ? `
                                 <div class="admin-controls">
                                     <button class="btn btn-danger text-sm delete-btn" data-id="${msg.id}">删除</button>
-                                    ${msg.isPinned ? `
-                                        <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="true">
-                                            取消置顶
-                                        </button>
-                                        <input type="number" class="priority-input" placeholder="优先级" value="${msg.priority !== undefined ? msg.priority : ''}" data-id="${msg.id}" min="0" max="100">
-                                    ` : `
-                                        <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="false">
-                                            置顶
-                                        </button>
-                                        <input type="number" class="priority-input" placeholder="优先级" value="" data-id="${msg.id}" min="0" max="100">
-                                    `}
+                                    <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="${msg.isPinned ? 'true' : 'false'}">
+                                        ${msg.isPinned ? '取消置顶' : '置顶'}
+                                    </button>
                                 </div>
                             ` : ''}
                         </div>
@@ -470,9 +453,7 @@
                         button.addEventListener('click', async (e) => {
                             const messageId = e.target.dataset.id;
                             const isCurrentlyPinned = e.target.dataset.pinned === 'true';
-                            const priorityInput = document.querySelector(`.priority-input[data-id="${messageId}"]`);
-                            const priority = priorityInput ? parseInt(priorityInput.value, 10) : undefined; // Get priority
-                            await togglePinMessage(messageId, !isCurrentlyPinned, priority);
+                            await togglePinMessage(messageId, !isCurrentlyPinned);
                         });
                     });
                 }
@@ -606,7 +587,7 @@
                 if (isAdmin && adminSessionKey) {
                     headers['X-Admin-Session'] = adminSessionKey; // Use session key for admin post
                     bodyData.isAdminMessage = true; // Add isAdminMessage flag for admin's direct messages
-                    // No isPinned or priority for new messages from frontend, only via explicit pin button
+                    // No isPinned for new messages from frontend, only via explicit pin button
                 }
 
                 const response = await fetch(`${WORKER_URL}/messages`, {
@@ -952,25 +933,18 @@
                 ipManagementStatus.textContent = '解封 IP 请求失败。' + (error.message || '');
                 ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
             }
-        });
+        }
 
         // --- Pin/Unpin Message Function ---
-        async function togglePinMessage(messageId, isPinned, priority) {
+        async function togglePinMessage(messageId, isPinned) {
             try {
-                const payload = { id: messageId, isPinned: isPinned };
-                if (isPinned && priority !== undefined && !isNaN(priority)) {
-                    payload.priority = priority;
-                } else if (!isPinned) {
-                    payload.priority = undefined; // Clear priority when unpinning
-                }
-
                 const response = await fetch(`${WORKER_URL}/admin/pin-message`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-Admin-Session': adminSessionKey,
                     },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify({ id: messageId, isPinned: isPinned }),
                 });
 
                 if (!response.ok) {
