@@ -31,6 +31,7 @@
             flex-direction: column;
             justify-content: space-between;
             align-items: flex-start;
+            position: relative; /* For pinned badge positioning */
         }
         .message-header {
             display: flex;
@@ -46,6 +47,8 @@
         .admin-controls {
             flex-shrink: 0;
             margin-left: 1rem;
+            display: flex; /* To align buttons horizontally */
+            gap: 0.5rem; /* Spacing between buttons */
         }
         .btn {
             padding: 0.5rem 1rem;
@@ -73,6 +76,13 @@
         }
         .btn-secondary:hover {
             background-color: #4b5563;
+        }
+        .btn-info { /* New style for Pin button */
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: #2563eb;
         }
         .input-field {
             width: 100%;
@@ -118,6 +128,19 @@
             font-size: 0.75rem;
             font-weight: 600;
             margin-left: 0.5rem;
+        }
+        /* New style for pinned message badge */
+        .pinned-badge {
+            background-color: #a78bfa; /* Purple for pinned messages */
+            color: #4c1d95;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            /* position: absolute; /* Optional: for absolute positioning */
+            /* top: 0.5rem; */
+            /* right: 0.5rem; */
         }
         .reply-form-container {
             margin-top: 1rem;
@@ -349,6 +372,7 @@
                                 <p class="text-lg font-semibold text-gray-900">
                                     ${msg.username ?? '匿名用户'}
                                     ${msg.isAdminMessage ? '<span class="admin-message-badge">管理员</span>' : ''}
+                                    ${msg.isPinned ? '<span class="pinned-badge">置顶</span>' : ''}
                                 </p>
                                 <p class="text-gray-700 mt-1">${msg.message ?? '无内容'}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
@@ -358,6 +382,9 @@
                             ${isAdmin ? `
                                 <div class="admin-controls">
                                     <button class="btn btn-danger text-sm delete-btn" data-id="${msg.id}">删除</button>
+                                    <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="${msg.isPinned ? 'true' : 'false'}">
+                                        ${msg.isPinned ? '取消置顶' : '置顶'}
+                                    </button>
                                 </div>
                             ` : ''}
                         </div>
@@ -407,6 +434,14 @@
                             showCustomConfirm('确定要删除这条留言吗？', async () => {
                                 await deleteMessage(messageId);
                             });
+                        });
+                    });
+                    // Add event listeners for pin/unpin buttons
+                    document.querySelectorAll('.pin-toggle-btn').forEach(button => {
+                        button.addEventListener('click', async (e) => {
+                            const messageId = e.target.dataset.id;
+                            const isCurrentlyPinned = e.target.dataset.pinned === 'true';
+                            await togglePinMessage(messageId, !isCurrentlyPinned);
                         });
                     });
                 }
@@ -476,8 +511,12 @@
                     typeof msg.id === 'string' 
                 );
 
-                // Sort by timestamp in descending order (latest first)
-                messages.sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0)); // Sort safely with default 0
+                // Sorting logic is now handled by the backend.
+                // messages.sort((a, b) => {
+                //     if (a.isPinned && !b.isPinned) return -1;
+                //     if (!a.isPinned && b.isPinned) return 1;
+                //     return (b.timestamp ?? 0) - (a.timestamp ?? 0);
+                // });
 
                 renderMessages(messages);
             } catch (error) {
@@ -536,6 +575,7 @@
                 if (isAdmin && adminSessionKey) {
                     headers['X-Admin-Session'] = adminSessionKey; // Use session key for admin post
                     bodyData.isAdminMessage = true; // Add isAdminMessage flag for admin's direct messages
+                    // No isPinned for new messages from frontend, only via explicit pin button
                 }
 
                 const response = await fetch(`${WORKER_URL}/messages`, {
@@ -880,6 +920,41 @@
                 console.error('Failed to unban IP:', error);
                 ipManagementStatus.textContent = '解封 IP 请求失败。' + (error.message || '');
                 ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
+            }
+        }
+
+        // --- Pin/Unpin Message Function ---
+        async function togglePinMessage(messageId, isPinned) {
+            try {
+                const response = await fetch(`${WORKER_URL}/admin/pin-message`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Session': adminSessionKey,
+                    },
+                    body: JSON.stringify({ id: messageId, isPinned: isPinned }),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    showCustomAlert(`留言 ${messageId} 已${isPinned ? '置顶' : '取消置顶'}。`);
+                    await fetchMessages(); // Re-fetch messages to update order and button text
+                } else {
+                    showCustomAlert(`操作失败: ${result.message || '未知错误'}`);
+                }
+            } catch (error) {
+                console.error('Failed to toggle pin status:', error);
+                showCustomAlert('操作失败。' + (error.message || ''));
             }
         }
 
