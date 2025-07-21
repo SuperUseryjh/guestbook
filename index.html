@@ -52,7 +52,13 @@
             gap: 0.5rem; /* Spacing between buttons */
             align-items: center; /* Vertically align items */
         }
-        /* Removed .admin-controls .priority-input as it's no longer needed */
+        .admin-controls .priority-input {
+            width: 60px; /* Adjust width as needed */
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
         .btn {
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
@@ -141,6 +147,9 @@
             font-size: 0.75rem;
             font-weight: 600;
             margin-left: 0.5rem;
+            /* position: absolute; /* Optional: for absolute positioning */
+            /* top: 0.5rem; */
+            /* right: 0.5rem; */
         }
         .reply-form-container {
             margin-top: 1rem;
@@ -159,72 +168,9 @@
         .banned-ip-item:last-child {
             border-bottom: none;
         }
-
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-        }
-        .modal-content h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: #333;
-        }
-        .modal-content p {
-            font-size: 1rem;
-            line-height: 1.6;
-            color: #555;
-            text-align: left;
-            margin-bottom: 1.5rem;
-            max-height: 200px; /* Limit height for scroll */
-            overflow-y: auto; /* Enable scroll if content overflows */
-            border: 1px solid #e2e8f0;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            background-color: #f8fafc;
-        }
-        .modal-content button {
-            margin-top: 1rem;
-        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
-    <!-- Usage Terms Modal -->
-    <div id="termsModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2>使用须知</h2>
-            <p>
-                欢迎使用留言板！为了维护良好的社区环境，请您在使用前仔细阅读以下须知：<br><br>
-                1. 请勿发布任何违法、色情、暴力、歧视、人身攻击或侵犯他人权益的内容。<br>
-                2. 请勿发布垃圾信息、广告或与本留言板主题无关的内容。<br>
-                3. 请尊重他人，文明交流，友善发言。<br>
-                4. 管理员有权删除不符合规定的留言，并对违规用户进行封禁处理。<br>
-                5. 您的IP地址将在您发布留言时被记录，以用于防止恶意行为和垃圾信息。<br>
-                6. 本留言板保留对本须知内容进行修改的权利，恕不另行通知。<br><br>
-                感谢您的理解与配合！
-            </p>
-            <button id="agreeTermsBtn" class="btn btn-primary w-full">我已阅读并同意</button>
-        </div>
-    </div>
-
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">留言板</h1>
 
@@ -364,10 +310,6 @@
         const ipManagementStatus = document.getElementById('ipManagementStatus');
         const bannedIpListContainer = document.getElementById('bannedIpList');
 
-        // Terms Modal elements
-        const termsModal = document.getElementById('termsModal');
-        const agreeTermsBtn = document.getElementById('agreeTermsBtn');
-
 
         // Helper function: format timestamp
         function formatTimestamp(timestamp) {
@@ -451,7 +393,7 @@
                                 <p class="text-lg font-semibold text-gray-900">
                                     ${msg.username ?? '匿名用户'}
                                     ${msg.isAdminMessage ? '<span class="admin-message-badge">管理员</span>' : ''}
-                                    ${msg.isPinned ? `<span class="pinned-badge">置顶</span>` : ''}
+                                    ${msg.isPinned ? `<span class="pinned-badge">置顶${msg.priority !== undefined ? ` (P${msg.priority})` : ''}</span>` : ''}
                                 </p>
                                 <p class="text-gray-700 mt-1">${formatMessageContent(msg.message ?? '无内容')}</p>
                                 <p class="text-xs text-gray-500 mt-2">发表于: ${formatTimestamp(msg.timestamp ?? 0)}</p>
@@ -461,9 +403,17 @@
                             ${isAdmin ? `
                                 <div class="admin-controls">
                                     <button class="btn btn-danger text-sm delete-btn" data-id="${msg.id}">删除</button>
-                                    <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="${msg.isPinned ? 'true' : 'false'}">
-                                        ${msg.isPinned ? '取消置顶' : '置顶'}
-                                    </button>
+                                    ${msg.isPinned ? `
+                                        <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="true">
+                                            取消置顶
+                                        </button>
+                                        <input type="number" class="priority-input" placeholder="优先级" value="${msg.priority !== undefined ? msg.priority : ''}" data-id="${msg.id}" min="0" max="100">
+                                    ` : `
+                                        <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="false">
+                                            置顶
+                                        </button>
+                                        <input type="number" class="priority-input" placeholder="优先级" value="" data-id="${msg.id}" min="0" max="100">
+                                    `}
                                 </div>
                             ` : ''}
                         </div>
@@ -520,8 +470,9 @@
                         button.addEventListener('click', async (e) => {
                             const messageId = e.target.dataset.id;
                             const isCurrentlyPinned = e.target.dataset.pinned === 'true';
-                            // No priority input anymore
-                            await togglePinMessage(messageId, !isCurrentlyPinned);
+                            const priorityInput = document.querySelector(`.priority-input[data-id="${messageId}"]`);
+                            const priority = priorityInput ? parseInt(priorityInput.value, 10) : undefined; // Get priority
+                            await togglePinMessage(messageId, !isCurrentlyPinned, priority);
                         });
                     });
                 }
@@ -1004,10 +955,14 @@
         });
 
         // --- Pin/Unpin Message Function ---
-        async function togglePinMessage(messageId, isPinned) { // Removed priority argument
+        async function togglePinMessage(messageId, isPinned, priority) {
             try {
                 const payload = { id: messageId, isPinned: isPinned };
-                // Removed priority logic from payload
+                if (isPinned && priority !== undefined && !isNaN(priority)) {
+                    payload.priority = priority;
+                } else if (!isPinned) {
+                    payload.priority = undefined; // Clear priority when unpinning
+                }
 
                 const response = await fetch(`${WORKER_URL}/admin/pin-message`, {
                     method: 'POST',
@@ -1080,27 +1035,9 @@
             });
         }
 
-        // --- Terms Modal Logic ---
-        function showTermsModal() {
-            termsModal.classList.remove('hidden');
-            // Disable scrolling on body
-            document.body.style.overflow = 'hidden';
-        }
 
-        function hideTermsModal() {
-            termsModal.classList.add('hidden');
-            // Re-enable scrolling on body
-            document.body.style.overflow = '';
-        }
-
-        agreeTermsBtn.addEventListener('click', () => {
-            localStorage.setItem('termsAgreed', 'true');
-            hideTermsModal();
-            // After agreeing to terms, proceed with initial data fetching and UI setup
-            initializeGuestbook();
-        });
-
-        function initializeGuestbook() {
+        // Initialize: fetch messages and update admin status display
+        document.addEventListener('DOMContentLoaded', () => {
             // Check if adminSessionKey exists in localStorage and if isAdmin is true
             if (localStorage.getItem('adminSessionKey') && localStorage.getItem('isAdmin') === 'true') {
                 isAdmin = true;
@@ -1127,16 +1064,6 @@
                 adminLogoutBtn.classList.add('hidden');
                 adminLoginForm.classList.remove('hidden');
                 adminConfigSection.style.display = 'none'; // Hide admin config section
-            }
-        }
-
-        // Initialize: check for terms agreement on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            const termsAgreed = localStorage.getItem('termsAgreed');
-            if (!termsAgreed) {
-                showTermsModal();
-            } else {
-                initializeGuestbook();
             }
         });
     </script>
