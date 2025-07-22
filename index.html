@@ -15,7 +15,7 @@
         }
         .container {
             max-width: 800px;
-            margin: 2rem auto; /* 保持居中 */
+            margin: 2rem auto; /* 保持居中：上下外边距2rem，左右外边距自动分配以实现水平居中 */
             padding: 1.5rem;
             background-color: #ffffff;
             border-radius: 1rem;
@@ -220,6 +220,10 @@
                 6. 本留言板保留对本须知内容进行修改的权利，恕不另行通知。<br><br>
                 感谢您的理解与配合！
             </p>
+            <div class="flex items-center justify-center mt-4 mb-4">
+                <input type="checkbox" id="hideTermsTodayCheckbox" class="mr-2">
+                <label for="hideTermsTodayCheckbox" class="text-sm text-gray-700">今日不再显示</label>
+            </div>
             <button id="agreeTermsBtn" class="btn btn-primary w-full">我已阅读并同意</button>
         </div>
     </div>
@@ -347,7 +351,8 @@
             ipManagementStatus: document.getElementById('ipManagementStatus'),
             bannedIpListContainer: document.getElementById('bannedIpList'),
             termsModal: document.getElementById('termsModal'),
-            agreeTermsBtn: document.getElementById('agreeTermsBtn')
+            agreeTermsBtn: document.getElementById('agreeTermsBtn'),
+            hideTermsTodayCheckbox: document.getElementById('hideTermsTodayCheckbox') // New checkbox element
         };
 
         // --- Utility Functions ---
@@ -460,6 +465,48 @@
             });
         }
 
+        // --- Cookie Handling Functions ---
+        /**
+         * Sets a cookie.
+         * @param {string} name - The name of the cookie.
+         * @param {string} value - The value of the cookie.
+         * @param {number} days - The number of days until the cookie expires.
+         */
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        }
+
+        /**
+         * Gets a cookie by name.
+         * @param {string} name - The name of the cookie.
+         * @returns {string|null} The cookie value, or null if not found.
+         */
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i=0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        /**
+         * Erases a cookie by name.
+         * @param {string} name - The name of the cookie.
+         */
+        function eraseCookie(name) {
+            document.cookie = name + '=; Max-Age=-99999999;';
+        }
+
+
         // --- API Interaction Functions ---
 
         /**
@@ -483,13 +530,15 @@
                         adminLogout();
                         return [];
                     }
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
                 const rawMessages = await response.json();
                 return rawMessages.filter(msg => typeof msg === 'object' && msg !== null && typeof msg.id === 'string');
             } catch (error) {
                 console.error('Failed to fetch messages:', error);
-                elements.messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。</p>`;
+                // Display a user-friendly error message on the UI
+                elements.messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。请检查网络连接或后端服务是否正常运行。</p>`;
                 return [];
             }
         }
@@ -511,9 +560,10 @@
                     elements.setStartTimeInput.value = postingStartTime;
                     elements.setEndTimeInput.value = postingEndTime;
                 }
-            } catch (error) {
+            }
+            catch (error) {
                 console.error('Failed to fetch config:', error);
-                elements.postingHoursStatusText.textContent = 'Failed to fetch posting hours.';
+                elements.postingHoursStatusText.textContent = '加载发言时段失败。请检查网络连接或后端服务是否正常运行。';
                 elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 // Fallback to default full day if config fetch fails
                 postingStartTime = `${getCurrentDateFormatted()}T00:00`;
@@ -530,17 +580,13 @@
         async function postMessage(username, message) {
             try {
                 const headers = { 'Content-Type': 'application/json' };
-                let bodyData = { username, message };
-
                 if (isAdmin && adminSessionKey) {
                     headers['X-Admin-Session'] = adminSessionKey;
-                    bodyData.isAdminMessage = true;
                 }
-
                 const response = await fetch(`${WORKER_URL}/messages`, {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify(bodyData),
+                    body: JSON.stringify({ username, message, isAdminMessage: isAdmin }), // isAdminMessage should be based on isAdmin
                 });
 
                 if (!response.ok) {
@@ -557,7 +603,7 @@
                 await updateUI(); // Refresh UI after successful post
             } catch (error) {
                 console.error('Failed to submit message:', error);
-                showCustomAlert('Failed to submit message. ' + (error.message || ''));
+                showCustomAlert('提交留言失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -587,7 +633,7 @@
                 await updateUI(); // Refresh UI
             } catch (error) {
                 console.error('Failed to delete message:', error);
-                showCustomAlert('Failed to delete message. ' + (error.message || ''));
+                showCustomAlert('删除留言失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -626,7 +672,7 @@
                 await updateUI(); // Refresh UI
             } catch (error) {
                 console.error('Failed to add reply:', error);
-                showCustomAlert('Failed to add reply. ' + (error.message || ''));
+                showCustomAlert('添加回复失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -665,7 +711,7 @@
                 }
             } catch (error) {
                 console.error('Failed to toggle pin status:', error);
-                showCustomAlert('操作失败。' + (error.message || ''));
+                showCustomAlert('操作失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -694,7 +740,7 @@
                 return await response.json();
             } catch (error) {
                 console.error('Failed to fetch banned IPs:', error);
-                elements.bannedIpListContainer.innerHTML = `<p class="text-red-500 text-center text-sm">加载封禁IP失败。</p>`;
+                elements.bannedIpListContainer.innerHTML = `<p class="text-red-500 text-center text-sm">加载封禁IP失败。请检查网络连接或后端服务是否正常运行。</p>`;
                 return [];
             }
         }
@@ -735,7 +781,7 @@
                 }
             } catch (error) {
                 console.error('Failed to ban IP:', error);
-                elements.ipManagementStatus.textContent = '封禁 IP 请求失败。' + (error.message || '');
+                elements.ipManagementStatus.textContent = '封禁 IP 请求失败。请检查网络连接或后端服务是否正常运行。' + (error.message || '');
                 elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
             }
         }
@@ -775,7 +821,7 @@
                 }
             } catch (error) {
                 console.error('Failed to unban IP:', error);
-                elements.ipManagementStatus.textContent = '解封 IP 请求失败。' + (error.message || '');
+                elements.ipManagementStatus.textContent = '解封 IP 请求失败。请检查网络连接或后端服务是否正常运行。' + (error.message || '');
                 elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
             }
         }
@@ -904,6 +950,7 @@
         function showTermsModal() {
             elements.termsModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Disable scrolling on body
+            console.log('Terms modal shown.'); // Debug log
         }
 
         /**
@@ -912,6 +959,7 @@
         function hideTermsModal() {
             elements.termsModal.classList.add('hidden');
             document.body.style.overflow = ''; // Re-enable scrolling on body
+            console.log('Terms modal hidden.'); // Debug log
         }
 
         // --- Event Handlers ---
@@ -978,7 +1026,7 @@
                 }
             } catch (error) {
                 console.error('Admin login failed:', error);
-                elements.adminStatusText.textContent = '登录请求失败。';
+                elements.adminStatusText.textContent = '登录请求失败。请检查网络连接或后端服务是否正常运行。';
                 elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
             } finally {
                 elements.adminPasswordInput.value = '';
@@ -1044,7 +1092,7 @@
                 }
             } catch (error) {
                 console.error('Failed to save posting hours:', error);
-                elements.postingHoursStatusText.textContent = 'Failed to save posting hours. ' + (error.message || '');
+                elements.postingHoursStatusText.textContent = '保存发言时段失败。请检查网络连接或后端服务是否正常运行。' + (error.message || '');
                 elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
             }
         }
@@ -1143,7 +1191,7 @@
             elements.savePostingHoursBtn.addEventListener('click', handleSavePostingHours);
             elements.banIpBtn.addEventListener('click', handleBanIp);
             elements.unbanIpBtn.addEventListener('click', handleUnbanIp);
-            elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement);
+            // The agreeTermsBtn listener is now attached directly in DOMContentLoaded for robustness
         }
 
         // --- Core Application Logic ---
@@ -1185,7 +1233,14 @@
          * Handles the user agreeing to terms.
          */
         function handleTermsAgreement() {
-            localStorage.setItem('termsAgreed', 'true');
+            console.log('handleTermsAgreement called.'); // Debug log
+            if (elements.hideTermsTodayCheckbox.checked) {
+                setCookie('hideTermsToday', 'true', 1); // Set cookie for 1 day
+                console.log('Cookie "hideTermsToday" set for 1 day.'); // Debug log
+            } else {
+                eraseCookie('hideTermsToday'); // Ensure cookie is not set if unchecked
+                console.log('Cookie "hideTermsToday" erased.'); // Debug log
+            }
             hideTermsModal();
             initializeGuestbook();
         }
@@ -1195,31 +1250,44 @@
          * Checks admin status, fetches data, and sets up UI.
          */
         function initializeGuestbook() {
-            // Check admin status from local storage
+            console.log('initializeGuestbook called.'); // Debug log
             isAdmin = localStorage.getItem('isAdmin') === 'true';
             adminSessionKey = localStorage.getItem('adminSessionKey');
-            if (!isAdmin || !adminSessionKey) { // If not admin or session key missing/invalid, reset
+            if (!isAdmin || !adminSessionKey) {
                 isAdmin = false;
                 adminSessionKey = null;
                 localStorage.removeItem('isAdmin');
                 localStorage.removeItem('adminSessionKey');
             }
             
-            // Note: attachGlobalEventListeners is now called directly in DOMContentLoaded
-            updateUI(); // Initial UI render and data fetch
+            updateUI();
         }
 
         // --- Initial Load Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            attachGlobalEventListeners(); // 确保所有事件监听器在DOM加载后立即绑定
+            console.log('DOMContentLoaded fired.'); // Debug log
 
-            const termsAgreed = localStorage.getItem('termsAgreed');
-            if (!termsAgreed) {
+            // Ensure the agreeTermsBtn listener is attached as early as possible
+            // This is crucial for the button to work immediately on page load.
+            if (elements.agreeTermsBtn) {
+                elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement);
+                console.log('agreeTermsBtn listener attached.'); // Debug log
+            } else {
+                console.error('agreeTermsBtn element not found!');
+            }
+
+            // Attach other global event listeners
+            attachGlobalEventListeners();
+
+            const hideTermsToday = getCookie('hideTermsToday');
+            if (!hideTermsToday) {
                 showTermsModal();
             } else {
-                initializeGuestbook(); // 如果已经同意条款，则直接初始化
+                console.log('Cookie "hideTermsToday" found, skipping modal.'); // Debug log
+                initializeGuestbook();
             }
         });
     </script>
 </body>
 </html>
+
