@@ -15,7 +15,7 @@
         }
         .container {
             max-width: 800px;
-            margin: 2rem auto; /* 保持居中 */
+            margin: 2rem auto; /* 保持居中：上下外边距2rem，左右外边距自动分配以实现水平居中 */
             padding: 1.5rem;
             background-color: #ffffff;
             border-radius: 1rem;
@@ -203,6 +203,44 @@
         .modal-content button {
             margin-top: 1rem;
         }
+
+        /* New: Settings Modal specific styles */
+        .settings-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            backdrop-filter: blur(8px); /* Blurred background effect */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .settings-modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            position: relative; /* For close button positioning */
+        }
+        .settings-modal-close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        .settings-modal-close-btn:hover {
+            color: #374151;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
@@ -228,9 +266,32 @@
         </div>
     </div>
 
-    <div class="container">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">留言板</h1>
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="settings-modal-overlay hidden">
+        <div class="settings-modal-content">
+            <button id="closeSettingsModalBtn" class="settings-modal-close-btn">&times;</button>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">实用工具</h2>
+            <div class="flex flex-col space-y-4">
+                <button id="refreshMessagesBtn" class="btn btn-secondary w-full">刷新留言</button>
+                <button id="deleteTermsCookieBtn" class="btn btn-secondary w-full">删除“今日不再显示”Cookie</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- Navbar -->
+    <nav class="bg-indigo-600 p-4 shadow-md flex justify-between items-center">
+        <div class="flex items-center">
+            <img src="https://mr-onion-blog.fun/img/avatar.png" alt="NSOI Logo" class="h-8 w-8 rounded-full mr-2">
+            <span class="text-white text-xl font-bold">NSOI 留言板</span>
+        </div>
+        <button id="gearIcon" class="text-white hover:text-indigo-200 focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+                <path fill-rule="evenodd" d="M11.078 2.25c-.917 0-1.699.663-1.85 1.567L9.05 4.889c-.83.147-1.49.65-1.984 1.285a4.746 4.746 0 0 0-1.285 1.984l-.302 1.77c-.147.83-.65 1.49-1.285 1.984-1.32.83-2.518 2.13-2.83 3.77a1.53 1.53 0 0 0-1.567 1.85c0 .917.663 1.699 1.567 1.85l1.77.302c.83.147 1.49.65 1.984 1.285a4.746 4.746 0 0 0 1.285 1.984l.302 1.77c.147.83.65 1.49 1.285 1.984 1.32.83 2.518 2.13 2.83 3.77a1.53 1.53 0 0 0 1.567 1.85c.917 0 1.699-.663 1.85-1.567l.302-1.77c.147-.83.65-1.49 1.285-1.984a4.746 4.746 0 0 0 1.984-1.285l1.77-.302c.83-.147 1.49-.65 1.984-1.285 1.32-.83 2.518-2.13 2.83-3.77a1.53 1.53 0 0 0-1.567-1.85l-1.77-.302a4.746 4.746 0 0 0-1.285-1.984l-.302-1.77c-.147-.83-.65-1.49-1.285-1.984-1.32-.83-2.518-2.13-2.83-3.77a1.53 1.53 0 0 0-1.567-1.85ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" clip-rule="evenodd" />
+            </svg>
+        </button>
+    </nav>
+
+    <div class="container">
         <!-- 留言提交表单 -->
         <div class="mb-8 p-6 bg-white rounded-xl shadow-md">
             <h2 class="text-2xl font-semibold text-gray-700 mb-4">发表留言</h2>
@@ -352,7 +413,13 @@
             bannedIpListContainer: document.getElementById('bannedIpList'),
             termsModal: document.getElementById('termsModal'),
             agreeTermsBtn: document.getElementById('agreeTermsBtn'),
-            hideTermsTodayCheckbox: document.getElementById('hideTermsTodayCheckbox') // New checkbox element
+            hideTermsTodayCheckbox: document.getElementById('hideTermsTodayCheckbox'),
+            // New elements for settings modal
+            settingsModal: document.getElementById('settingsModal'),
+            gearIcon: document.getElementById('gearIcon'),
+            closeSettingsModalBtn: document.getElementById('closeSettingsModalBtn'),
+            refreshMessagesBtn: document.getElementById('refreshMessagesBtn'),
+            deleteTermsCookieBtn: document.getElementById('deleteTermsCookieBtn')
         };
 
         // --- Utility Functions ---
@@ -530,13 +597,15 @@
                         adminLogout();
                         return [];
                     }
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
                 }
                 const rawMessages = await response.json();
                 return rawMessages.filter(msg => typeof msg === 'object' && msg !== null && typeof msg.id === 'string');
             } catch (error) {
                 console.error('Failed to fetch messages:', error);
-                elements.messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。</p>`;
+                // Display a user-friendly error message on the UI
+                elements.messagesContainer.innerHTML = `<p class="text-red-500 text-center">加载留言失败。请检查网络连接或后端服务是否正常运行。</p>`;
                 return [];
             }
         }
@@ -561,11 +630,15 @@
             }
             catch (error) {
                 console.error('Failed to fetch config:', error);
-                elements.postingHoursStatusText.textContent = 'Failed to fetch posting hours.';
+                elements.postingHoursStatusText.textContent = '加载发言时段失败。请检查网络连接或后端服务是否正常运行。';
                 elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 // Fallback to default full day if config fetch fails
-                postingStartTime = `${getCurrentDateFormatted()}T00:00`;
-                postingEndTime = `${getCurrentDateFormatted()}T23:59`;
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                const day = now.getDate().toString().padStart(2, '0');
+                postingStartTime = `${year}-${month}-${day}T00:00`;
+                postingEndTime = `${year}-${month}-${day}T23:59`;
                 updatePostingHoursDisplay(); 
             }
         }
@@ -578,17 +651,13 @@
         async function postMessage(username, message) {
             try {
                 const headers = { 'Content-Type': 'application/json' };
-                let bodyData = { username, message };
-
                 if (isAdmin && adminSessionKey) {
                     headers['X-Admin-Session'] = adminSessionKey;
-                    bodyData.isAdminMessage = true;
                 }
-
                 const response = await fetch(`${WORKER_URL}/messages`, {
                     method: 'POST',
                     headers: headers,
-                    body: JSON.stringify(bodyData),
+                    body: JSON.stringify({ username, message, isAdminMessage: isAdmin }), // isAdminMessage should be based on isAdmin
                 });
 
                 if (!response.ok) {
@@ -605,7 +674,7 @@
                 await updateUI(); // Refresh UI after successful post
             } catch (error) {
                 console.error('Failed to submit message:', error);
-                showCustomAlert('Failed to submit message. ' + (error.message || ''));
+                showCustomAlert('提交留言失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -635,7 +704,7 @@
                 await updateUI(); // Refresh UI
             } catch (error) {
                 console.error('Failed to delete message:', error);
-                showCustomAlert('Failed to delete message. ' + (error.message || ''));
+                showCustomAlert('删除留言失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -674,7 +743,7 @@
                 await updateUI(); // Refresh UI
             } catch (error) {
                 console.error('Failed to add reply:', error);
-                showCustomAlert('Failed to add reply. ' + (error.message || ''));
+                showCustomAlert('添加回复失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -713,7 +782,7 @@
                 }
             } catch (error) {
                 console.error('Failed to toggle pin status:', error);
-                showCustomAlert('操作失败。' + (error.message || ''));
+                showCustomAlert('操作失败。请检查网络连接或后端服务是否正常运行。 ' + (error.message || ''));
             }
         }
 
@@ -742,7 +811,7 @@
                 return await response.json();
             } catch (error) {
                 console.error('Failed to fetch banned IPs:', error);
-                elements.bannedIpListContainer.innerHTML = `<p class="text-red-500 text-center text-sm">加载封禁IP失败。</p>`;
+                elements.bannedIpListContainer.innerHTML = `<p class="text-red-500 text-center text-sm">加载封禁IP失败。请检查网络连接或后端服务是否正常运行。</p>`;
                 return [];
             }
         }
@@ -783,7 +852,7 @@
                 }
             } catch (error) {
                 console.error('Failed to ban IP:', error);
-                elements.ipManagementStatus.textContent = '封禁 IP 请求失败。' + (error.message || '');
+                elements.ipManagementStatus.textContent = '封禁 IP 请求失败。请检查网络连接或后端服务是否正常运行。' + (error.message || '');
                 elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
             }
         }
@@ -823,7 +892,7 @@
                 }
             } catch (error) {
                 console.error('Failed to unban IP:', error);
-                elements.ipManagementStatus.textContent = '解封 IP 请求失败。' + (error.message || '');
+                elements.ipManagementStatus.textContent = '解封 IP 请求失败。请检查网络连接或后端服务是否正常运行。' + (error.message || '');
                 elements.ipManagementStatus.className = 'text-center mt-2 text-sm text-red-600';
             }
         }
@@ -962,6 +1031,22 @@
             document.body.style.overflow = ''; // Re-enable scrolling on body
         }
 
+        /**
+         * Shows the settings modal.
+         */
+        function showSettingsModal() {
+            elements.settingsModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Disable scrolling on body
+        }
+
+        /**
+         * Hides the settings modal.
+         */
+        function hideSettingsModal() {
+            elements.settingsModal.classList.add('hidden');
+            document.body.style.overflow = ''; // Re-enable scrolling on body
+        }
+
         // --- Event Handlers ---
 
         /**
@@ -1026,7 +1111,7 @@
                 }
             } catch (error) {
                 console.error('Admin login failed:', error);
-                elements.adminStatusText.textContent = '登录请求失败。';
+                elements.adminStatusText.textContent = '登录请求失败。请检查网络连接或后端服务是否正常运行。';
                 elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
             } finally {
                 elements.adminPasswordInput.value = '';
@@ -1092,7 +1177,7 @@
                 }
             } catch (error) {
                 console.error('Failed to save posting hours:', error);
-                elements.postingHoursStatusText.textContent = 'Failed to save posting hours. ' + (error.message || '');
+                elements.postingHoursStatusText.textContent = '保存发言时段失败。请检查网络连接或后端服务是否正常运行。' + (error.message || '');
                 elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
             }
         }
@@ -1121,6 +1206,26 @@
                 return;
             }
             await unbanIp(ip);
+        }
+
+        /**
+         * Handles refreshing messages.
+         */
+        async function handleRefreshMessages() {
+            console.log('Refreshing messages...');
+            await updateUI();
+            showCustomAlert('留言已刷新。');
+            hideSettingsModal(); // Close settings modal after refresh
+        }
+
+        /**
+         * Handles deleting the "hideTermsToday" cookie.
+         */
+        function handleDeleteTermsCookie() {
+            eraseCookie('hideTermsToday');
+            showCustomAlert('“今日不再显示”Cookie 已删除。下次访问将再次显示使用须知。');
+            hideSettingsModal(); // Close settings modal after deleting cookie
+            showTermsModal(); // Re-show the terms modal immediately
         }
 
         // --- Event Listener Setup Functions ---
@@ -1191,7 +1296,19 @@
             elements.savePostingHoursBtn.addEventListener('click', handleSavePostingHours);
             elements.banIpBtn.addEventListener('click', handleBanIp);
             elements.unbanIpBtn.addEventListener('click', handleUnbanIp);
-            elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement); // Ensure this is attached
+            elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement);
+            
+            // New settings modal event listeners
+            elements.gearIcon.addEventListener('click', showSettingsModal);
+            elements.closeSettingsModalBtn.addEventListener('click', hideSettingsModal);
+            elements.settingsModal.addEventListener('click', (e) => {
+                // Close modal if clicked on overlay, not on content
+                if (e.target === elements.settingsModal) {
+                    hideSettingsModal();
+                }
+            });
+            elements.refreshMessagesBtn.addEventListener('click', handleRefreshMessages);
+            elements.deleteTermsCookieBtn.addEventListener('click', handleDeleteTermsCookie);
         }
 
         // --- Core Application Logic ---
@@ -1233,10 +1350,13 @@
          * Handles the user agreeing to terms.
          */
         function handleTermsAgreement() {
+            console.log('handleTermsAgreement called.'); // Debug log
             if (elements.hideTermsTodayCheckbox.checked) {
                 setCookie('hideTermsToday', 'true', 1); // Set cookie for 1 day
+                console.log('Cookie "hideTermsToday" set for 1 day.'); // Debug log
             } else {
                 eraseCookie('hideTermsToday'); // Ensure cookie is not set if unchecked
+                console.log('Cookie "hideTermsToday" erased.'); // Debug log
             }
             hideTermsModal();
             initializeGuestbook();
@@ -1247,6 +1367,7 @@
          * Checks admin status, fetches data, and sets up UI.
          */
         function initializeGuestbook() {
+            console.log('initializeGuestbook called.'); // Debug log
             isAdmin = localStorage.getItem('isAdmin') === 'true';
             adminSessionKey = localStorage.getItem('adminSessionKey');
             if (!isAdmin || !adminSessionKey) {
@@ -1261,12 +1382,16 @@
 
         // --- Initial Load Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            attachGlobalEventListeners(); // Ensure all event listeners are attached on DOMContentLoaded
+            console.log('DOMContentLoaded fired.'); // Debug log
+
+            // Attach all global event listeners, including the new buttons
+            attachGlobalEventListeners();
 
             const hideTermsToday = getCookie('hideTermsToday');
             if (!hideTermsToday) {
                 showTermsModal();
             } else {
+                console.log('Cookie "hideTermsToday" found, skipping modal.'); // Debug log
                 initializeGuestbook();
             }
         });
