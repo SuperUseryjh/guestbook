@@ -220,6 +220,10 @@
                 6. 本留言板保留对本须知内容进行修改的权利，恕不另行通知。<br><br>
                 感谢您的理解与配合！
             </p>
+            <div class="flex items-center justify-center mt-4 mb-4">
+                <input type="checkbox" id="hideTermsTodayCheckbox" class="mr-2">
+                <label for="hideTermsTodayCheckbox" class="text-sm text-gray-700">今日不再显示</label>
+            </div>
             <button id="agreeTermsBtn" class="btn btn-primary w-full">我已阅读并同意</button>
         </div>
     </div>
@@ -347,7 +351,8 @@
             ipManagementStatus: document.getElementById('ipManagementStatus'),
             bannedIpListContainer: document.getElementById('bannedIpList'),
             termsModal: document.getElementById('termsModal'),
-            agreeTermsBtn: document.getElementById('agreeTermsBtn')
+            agreeTermsBtn: document.getElementById('agreeTermsBtn'),
+            hideTermsTodayCheckbox: document.getElementById('hideTermsTodayCheckbox') // New checkbox element
         };
 
         // --- Utility Functions ---
@@ -460,6 +465,48 @@
             });
         }
 
+        // --- Cookie Handling Functions ---
+        /**
+         * Sets a cookie.
+         * @param {string} name - The name of the cookie.
+         * @param {string} value - The value of the cookie.
+         * @param {number} days - The number of days until the cookie expires.
+         */
+        function setCookie(name, value, days) {
+            let expires = "";
+            if (days) {
+                const date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+        }
+
+        /**
+         * Gets a cookie by name.
+         * @param {string} name - The name of the cookie.
+         * @returns {string|null} The cookie value, or null if not found.
+         */
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i=0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        /**
+         * Erases a cookie by name.
+         * @param {string} name - The name of the cookie.
+         */
+        function eraseCookie(name) {
+            document.cookie = name + '=; Max-Age=-99999999;';
+        }
+
+
         // --- API Interaction Functions ---
 
         /**
@@ -511,7 +558,8 @@
                     elements.setStartTimeInput.value = postingStartTime;
                     elements.setEndTimeInput.value = postingEndTime;
                 }
-            } catch (error) {
+            }
+            catch (error) {
                 console.error('Failed to fetch config:', error);
                 elements.postingHoursStatusText.textContent = 'Failed to fetch posting hours.';
                 elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
@@ -1143,7 +1191,7 @@
             elements.savePostingHoursBtn.addEventListener('click', handleSavePostingHours);
             elements.banIpBtn.addEventListener('click', handleBanIp);
             elements.unbanIpBtn.addEventListener('click', handleUnbanIp);
-            elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement);
+            elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement); // Ensure this is attached
         }
 
         // --- Core Application Logic ---
@@ -1185,7 +1233,11 @@
          * Handles the user agreeing to terms.
          */
         function handleTermsAgreement() {
-            localStorage.setItem('termsAgreed', 'true');
+            if (elements.hideTermsTodayCheckbox.checked) {
+                setCookie('hideTermsToday', 'true', 1); // Set cookie for 1 day
+            } else {
+                eraseCookie('hideTermsToday'); // Ensure cookie is not set if unchecked
+            }
             hideTermsModal();
             initializeGuestbook();
         }
@@ -1195,24 +1247,24 @@
          * Checks admin status, fetches data, and sets up UI.
          */
         function initializeGuestbook() {
-            // Check admin status from local storage
             isAdmin = localStorage.getItem('isAdmin') === 'true';
             adminSessionKey = localStorage.getItem('adminSessionKey');
-            if (!isAdmin || !adminSessionKey) { // If not admin or session key missing/invalid, reset
+            if (!isAdmin || !adminSessionKey) {
                 isAdmin = false;
                 adminSessionKey = null;
                 localStorage.removeItem('isAdmin');
                 localStorage.removeItem('adminSessionKey');
             }
             
-            attachGlobalEventListeners();
-            updateUI(); // Initial UI render and data fetch
+            updateUI();
         }
 
         // --- Initial Load Logic ---
         document.addEventListener('DOMContentLoaded', () => {
-            const termsAgreed = localStorage.getItem('termsAgreed');
-            if (!termsAgreed) {
+            attachGlobalEventListeners(); // Ensure all event listeners are attached on DOMContentLoaded
+
+            const hideTermsToday = getCookie('hideTermsToday');
+            if (!hideTermsToday) {
                 showTermsModal();
             } else {
                 initializeGuestbook();
