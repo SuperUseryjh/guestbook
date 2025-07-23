@@ -276,6 +276,14 @@
                 <button id="refreshMessagesBtn" class="btn btn-secondary w-full">刷新留言</button>
                 <button id="deleteTermsCookieBtn" class="btn btn-secondary w-full">删除“今日不再显示”Cookie</button>
             </div>
+            <!-- New: Admin section for SVG Icon Upload -->
+            <div id="adminSvgUploadSection" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200" style="display: none;">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">上传设置图标 (SVG)</h3>
+                <p class="text-sm text-gray-600 mb-3">请粘贴 Base64 编码的 SVG 字符串 (以 `data:image/svg+xml;base64,` 开头)。</p>
+                <textarea id="svgBase64Input" class="input-field text-xs" rows="4" placeholder="粘贴 Base64 编码的 SVG 字符串..." required></textarea>
+                <button id="uploadSvgBtn" class="btn btn-primary w-full mt-2">上传 SVG 图标</button>
+                <p id="svgUploadStatus" class="text-center mt-2 text-sm"></p>
+            </div>
         </div>
     </div>
 
@@ -286,12 +294,8 @@
             <span class="text-white text-xl font-bold">NSOI 留言板</span>
         </div>
         <button id="gearIcon" class="text-white hover:text-indigo-200 focus:outline-none">
-            <!-- 
-                请将您提供的“设置.png”图片转换为 Base64 编码，并替换下面的 'YOUR_BASE64_IMAGE_DATA_HERE'。
-                例如：<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..." alt="设置图标" class="w-6 h-6">
-                请注意，PNG是像素图，放大时可能失真，而SVG是矢量图，更适合图标。
-            -->
-            <img src="data:image/svg+xml;charset=utf-8;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBzdGFuZGFsb25lPSJubyI/PjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCI+PHN2ZyB0PSIxNzUzMTgxNTQ0NjAxIiBjbGFzcz0iaWNvbiIgdmlld0JveD0iMCAwIDEwMjQgMTAyNCIgdmVyc2lvbj0iMS4xIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHAtaWQ9IjE0ODAiIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTM0Ni4xMTIgNTkuOTA0YzI3LjUyLTExLjc3NiA2NC00LjA5NiA4NC40OCAxNy40NzIgMjMuMDQgMjQgNjAuNDE2IDQ4Ljg5NiA4NC4zNTIgNDguODk2IDIzLjY4IDAgNjEuMDU2LTI0LjU3NiA4My43MTItNDcuODcyIDE4LjYyNC0xOS40NTYgNTAuNzUyLTI3LjMyOCA3Ny4yNDgtMTkuNTJsNy44MDggMi44MTYgMi4xNzYgMS4wODggMTE5LjQyNCA2Ni41NmMyNS4wODggMTcuNTM2IDM1Ljg0IDUwLjExMiAyNy4xMzYgNzguNzJsLTUuODI0IDE1LjYxNmExMTEuMTA0IDExMS4xMDQgMCAwIDAtNS45NTIgMjYuMDQ4IDEwNS4xNTIgMTA1LjE1MiAwIDAgMCA5NS42OCAxMTAuNTkybDguOTYgMC40NDhoNC4wOTZjMjguNDE2IDAgNTAuMzA0IDIyLjc4NCA1Ni43MDQgNTYuODMybDIuMjQgMTIuNjA4IDEuOTIgMTIuNTQ0YzMuNjQ4IDI1LjA4OCA1Ljk1MiA0OS4xNTIgNS45NTIgNjkuNTY4IDAgMTYuMjU2LTEuNDcyIDM0Ljk0NC0zLjkwNCA1NC41OTJsLTIuMDQ4IDE0Ljk3Ni0yLjgxNiAxNy42LTEuMjggNy40MjRjLTUuOTUyIDMxLjEwNC0yNC43MDQgNTIuOTI4LTQ5LjI4IDU2LjM4NGwtNi43ODQgMC40NDhoLTQuNzM2Yy01Ny45MiAwLTEwNS4wMjQgNDcuMTA0LTEwNS4wMjQgMTA1LjAyNGwwLjE5MiA1LjE4NGMwLjY0IDYuNzg0IDIuMTc2IDE0LjIwOCA0LjQxNiAyMS43NmwzLjIgOS42IDEuMzQ0IDMuMzkyYzEyLjQxNiAyNy44NCA0LjczNiA2MS4yNDgtMTcuOTIgODEuNTM2bC02LjU5MiA1LjEyLTIuMzA0IDEuNTM2LTEyMS41MzYgNjYuODhjLTguOTYgMy44NC0xOC41NiA1LjgyNC0yOC41NDQgNS44MjQtMjEuNTA0IDAtNDIuNTYtOC45Ni01Ni40NDgtMjQuMTkyLTIyLjkxMi0yNS4yOC02MS40NC01Mi4wMzItODYuMDgtNTIuMDMyLTIzLjM2IDAtNjIuMjcyIDI1Ljc5Mi04NS41NjggNTAuOTQ0LTE4LjU2IDIwLjIyNC01MC43NTIgMjguNTQ0LTc3LjQ0IDIwLjY3MmwtNy44MDgtMi44OC0yLjQ5Ni0xLjE1Mi0xMTcuMTItNjUuNzkyYTcxLjYxNiA3MS42MTYgMCAwIDEtMjcuMDcyLTc4LjcybDUuODI0LTE1LjU1MiAxLjY2NC01LjMxMmMyLjI0LTcuMzYgMy43NzYtMTQuNTkyIDQuMzUyLTIxLjI0OGwwLjI1Ni01LjU2OGMwLTU0Ljg0OC00Mi4yNC0xMDAuMDMyLTk2LTEwNC42NGwtOC45Ni0wLjM4NGgtNC4wOTZjLTI4LjQxNiAwLTUwLjMwNC0yMi43ODQtNTYuNzA0LTU2Ljc2OGE1NTAuNjU2IDU1MC42NTYgMCAwIDEtMTAuMTEyLTk0LjcyYzAtMzEuMjk2IDUuNDQtNzEuNDI0IDEwLjExMi05NC42NTYgNS44ODgtMzEuMTA0IDI0LjY0LTUyLjkyOCA0OS4xNTItNTYuMzJsNi43ODQtMC41MTJoNC44YzU3LjkyIDAgMTA1LjAyNC00Ny4xMDQgMTA1LjAyNC0xMDUuMDI0bC0wLjE5Mi01LjE4NGExMDguMzUyIDEwOC4zNTIgMCAwIDAtNC40MTYtMjEuNzZsLTMuMi05LjYtMS40MDgtMy4zMjhhNzEuNTUyIDcxLjU1MiAwIDAgMSAxOC4wNDgtODEuNmw2LjU5Mi01LjEyIDIuMzY4LTEuNTM2TDM0Ni4xMTIgNTkuOTA0eiBtMjcuNjQ4IDg0Ljg2NGwtOTIuMTYgNTAuNjg4IDEuNzkyIDUuMDU2YzQuMjI0IDEzLjE4NCA3LjI5NiAyNy4yIDguNTc2IDQxLjIxNmwwLjY0IDE0LjAxNmExOTIuOTYgMTkyLjk2IDAgMCAxLTE2NS42MzIgMTkxLjEwNGwtMy45MDQgMC40NDgtMS4yOCA3LjkzNmE0ODAgNDgwIDAgMCAwLTQuNjcyIDQ0LjA5NmwtMC4zMiAxMi45OTJjMCAxNi4zMiAyLjA0OCAzNi44IDUuMDU2IDU2Ljk2bDEuMjE2IDcuOTM2IDMuOTA0IDAuNDQ4YTE5Mi45NiAxOTIuOTYgMCAwIDEgMTY1LjMxMiAxNzkuNTg0bDAuMzg0IDExLjUyYzAgMTguNzUyLTMuNjQ4IDM3Ljc2LTkuMjggNTUuNDI0bC0xLjc5MiA1LjA1NiA4NS41NjggNDcuOTM2IDEuMzQ0LTEuMjhjNy4wNC02LjkxMiAxNS42MTYtMTQuNDY0IDI1LjA4OC0yMS45NTJsOS43MjgtNy40MjRjMzcuMTItMjcuMiA3Mi45Ni00MS4xNTIgMTA2Ljc1Mi00MS4xNTIgMzMuOTg0IDAgNzAuMTQ0IDE0LjIwOCAxMDcuNTIgNDEuODU2IDEyLjQ4IDkuMzQ0IDIzLjU1MiAxOC45NDQgMzIuODMyIDI3LjkwNGwzLjM5MiAzLjM5MiA4OS41MzYtNDkuNDA4LTEuNzkyLTUuMDU2YTE5NS45NjggMTk1Ljk2OCAwIDAgMS04LjU3Ni00MS4yMTZsLTAuNjQtMTQuMDhhMTkyLjk2IDE5Mi45NiAwIDAgMSAxNjUuNzYtMTkxLjEwNGwzLjg0LTAuNDQ4IDEuMjgtOC4xMjhhNDgwIDQ4MCAwIDAgMCA0LjY3Mi00My45MDRsMC4zMi0xMi44NjRjMC0xNi4yNTYtMS45ODQtMzYuNDgtNC45OTItNTYuODk2bC0xLjM0NC04LjEyOC0zLjg0LTAuNDQ4YTE5Mi45NiAxOTIuOTYgMCAwIDEtMTY1LjM3Ni0xNzkuNTg0bC0wLjMyLTExLjUyYzAtMTguODggMy43MTItMzcuOTUyIDkuMjgtNTUuNDg4bDEuNzI4LTQuOTkyLTg4LjM4NC00OS4wMjQtMy4wNzIgMi45NDRhMzAzLjM2IDMwMy4zNiAwIDAgMS0yMy42OCAxOS42NDhsLTkuMjE2IDYuNzJjLTM2LjI4OCAyNS42LTcxLjI5NiAzOC43Mi0xMDQuMDY0IDM4LjcyLTMzLjA4OCAwLTY4LjM1Mi0xMy40NC0xMDQuOTYtMzkuNDg4YTMyNS43NiAzMjUuNzYgMCAwIDEtMzIuNjQtMjYuNDk2bC0zLjU4NC0zLjUyeiBtMTM2LjcwNCAxODguNjA4YTE3OC40OTYgMTc4LjQ5NiAwIDAgMSAxNzguMjQgMTc4LjI0IDE3OC40MzIgMTc4LjQzMiAwIDAgMS0xNzguMjQgMTc4LjMwNEExNzguNDMyIDE3OC40MzIgMCAwIDEgMzMyLjE2IDUxMS42MTYgMTc4LjQ5NiAxNzguNDk2IDAgMCAxIDUxMC40NjQgMzMzLjQ0eiBtMCA4OGMtNDkuNzkyIDAtOTAuMjQgNDAuNTEyLTkwLjI0IDkwLjI0IDAgNDkuNzkyIDQwLjQ0OCA5MC4zMDQgOTAuMjQgOTAuMzA0IDQ5Ljc5MiAwIDkwLjI0LTQwLjUxMiA5MC4yNC05MC4yNCAwLTQ5Ljc5Mi00MC40NDgtOTAuMzA0LTkwLjI0LTkwLjMwNHoiIGZpbGw9IiNmZmZmZmYiIHAtaWQ9IjE0ODEiPjwvcGF0aD48L3N2Zz4=" alt="设置图标" class="w-6 h-6">
+            <!-- Settings icon will be dynamically loaded here from KV -->
+            <img id="settingsIconImage" src="" alt="设置图标" class="w-6 h-6">
         </button>
     </nav>
 
@@ -418,12 +422,18 @@
             termsModal: document.getElementById('termsModal'),
             agreeTermsBtn: document.getElementById('agreeTermsBtn'),
             hideTermsTodayCheckbox: document.getElementById('hideTermsTodayCheckbox'),
-            // New elements for settings modal
+            // Elements for settings modal
             settingsModal: document.getElementById('settingsModal'),
             gearIcon: document.getElementById('gearIcon'),
+            settingsIconImage: document.getElementById('settingsIconImage'), // New: ID for the settings icon image
             closeSettingsModalBtn: document.getElementById('closeSettingsModalBtn'),
             refreshMessagesBtn: document.getElementById('refreshMessagesBtn'),
-            deleteTermsCookieBtn: document.getElementById('deleteTermsCookieBtn')
+            deleteTermsCookieBtn: document.getElementById('deleteTermsCookieBtn'),
+            // New elements for Admin SVG Upload
+            adminSvgUploadSection: document.getElementById('adminSvgUploadSection'),
+            svgBase64Input: document.getElementById('svgBase64Input'),
+            uploadSvgBtn: document.getElementById('uploadSvgBtn'),
+            svgUploadStatus: document.getElementById('svgUploadStatus')
         };
 
         // --- Utility Functions ---
@@ -900,6 +910,72 @@
             }
         }
 
+        /**
+         * Fetches the settings icon (SVG Base64) from the backend.
+         */
+        async function fetchSettingsIcon() {
+            try {
+                const response = await fetch(`${WORKER_URL}/settings-icon`);
+                if (!response.ok) {
+                    throw new Error(`HTTP Error! Status: ${response.status}`);
+                }
+                const result = await response.json();
+                if (result.success && result.svgBase64) {
+                    elements.settingsIconImage.src = result.svgBase64;
+                    elements.settingsIconImage.alt = "设置图标";
+                } else {
+                    console.warn("Failed to fetch custom settings icon, using default or no icon.");
+                    // Fallback to a generic icon or hide if no default is desired
+                    elements.settingsIconImage.src = ''; // Clear src if no icon
+                }
+            } catch (error) {
+                console.error('Error fetching settings icon:', error);
+                elements.settingsIconImage.src = ''; // Clear src on error
+            }
+        }
+
+        /**
+         * Sends a new Base64 encoded SVG string for the settings icon to the backend (admin only).
+         * @param {string} svgBase64 - The Base64 encoded SVG string.
+         */
+        async function setSettingsIcon(svgBase64) {
+            try {
+                const response = await fetch(`${WORKER_URL}/admin/settings-icon`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Session': adminSessionKey,
+                    },
+                    body: JSON.stringify({ svgBase64 }),
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401 && isAdmin) {
+                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
+                        adminLogout();
+                        return;
+                    }
+                    const errorText = await response.text();
+                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    elements.svgUploadStatus.textContent = 'SVG 图标上传成功！';
+                    elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-green-600';
+                    elements.svgBase64Input.value = ''; // Clear input
+                    await fetchSettingsIcon(); // Refresh the displayed icon
+                } else {
+                    elements.svgUploadStatus.textContent = `上传失败: ${result.message || '未知错误'}`;
+                    elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
+                }
+            } catch (error) {
+                console.error('Failed to upload SVG icon:', error);
+                elements.svgUploadStatus.textContent = '上传 SVG 图标失败。' + (error.message || '');
+                elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
+            }
+        }
+
         // --- UI Rendering Functions ---
 
         /**
@@ -1040,6 +1116,12 @@
         function showSettingsModal() {
             elements.settingsModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Disable scrolling on body
+            // Show/hide admin SVG upload section based on admin status
+            if (isAdmin) {
+                elements.adminSvgUploadSection.style.display = 'block';
+            } else {
+                elements.adminSvgUploadSection.style.display = 'none';
+            }
         }
 
         /**
@@ -1231,6 +1313,25 @@
             showTermsModal(); // Re-show the terms modal immediately
         }
 
+        /**
+         * Handles uploading a new SVG icon via Base64 string.
+         */
+        async function handleUploadSvgIcon() {
+            const svgBase64 = elements.svgBase64Input.value.trim();
+            if (!svgBase64) {
+                elements.svgUploadStatus.textContent = '请粘贴 Base64 编码的 SVG 字符串。';
+                elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
+                return;
+            }
+            // Basic validation: check if it starts with the correct prefix
+            if (!svgBase64.startsWith('data:image/svg+xml;base64,')) {
+                elements.svgUploadStatus.textContent = '无效的 SVG Base64 格式。必须以 "data:image/svg+xml;base64," 开头。';
+                elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
+                return;
+            }
+            await setSettingsIcon(svgBase64);
+        }
+
         // --- Event Listener Setup Functions ---
 
         /**
@@ -1301,7 +1402,7 @@
             elements.unbanIpBtn.addEventListener('click', handleUnbanIp);
             elements.agreeTermsBtn.addEventListener('click', handleTermsAgreement);
             
-            // New settings modal event listeners
+            // Settings modal event listeners
             elements.gearIcon.addEventListener('click', showSettingsModal);
             elements.closeSettingsModalBtn.addEventListener('click', hideSettingsModal);
             elements.settingsModal.addEventListener('click', (e) => {
@@ -1312,6 +1413,9 @@
             });
             elements.refreshMessagesBtn.addEventListener('click', handleRefreshMessages);
             elements.deleteTermsCookieBtn.addEventListener('click', handleDeleteTermsCookie);
+
+            // Admin SVG Upload event listener
+            elements.uploadSvgBtn.addEventListener('click', handleUploadSvgIcon);
         }
 
         // --- Core Application Logic ---
@@ -1323,9 +1427,13 @@
             const messages = await fetchMessages();
             renderMessages(messages);
             await fetchConfig();
+            await fetchSettingsIcon(); // Fetch and update settings icon on UI update
             if (isAdmin) {
                 const bannedIps = await fetchBannedIps();
                 renderBannedIps(bannedIps);
+                elements.adminSvgUploadSection.style.display = 'block'; // Show SVG upload section for admin
+            } else {
+                elements.adminSvgUploadSection.style.display = 'none'; // Hide for non-admin
             }
             updateAdminSectionVisibility();
         }
