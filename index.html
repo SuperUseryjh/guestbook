@@ -205,7 +205,7 @@
             margin-top: 1rem;
         }
 
-        /* New: Settings Modal specific styles */
+        /* Settings Modal specific styles */
         .settings-modal-overlay {
             position: fixed;
             top: 0;
@@ -242,6 +242,27 @@
         .settings-modal-close-btn:hover {
             color: #374151;
         }
+
+        /* Admin Panel Specific Styles */
+        .admin-panel-nav-btn {
+            display: block;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            text-align: left;
+            background-color: #e2e8f0;
+            color: #333;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        .admin-panel-nav-btn:hover {
+            background-color: #cbd5e1;
+        }
+        .admin-panel-nav-btn.active {
+            background-color: #4f46e5;
+            color: white;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col min-h-screen">
@@ -276,7 +297,6 @@
                 <button id="refreshMessagesBtn" class="btn btn-secondary w-full">刷新留言</button>
                 <button id="deleteTermsCookieBtn" class="btn btn-secondary w-full">删除“今日不再显示”Cookie</button>
             </div>
-            <!-- The adminSvgUploadSection has been moved to adminConfigSection -->
         </div>
     </div>
 
@@ -286,9 +306,11 @@
             <img src="https://mr-onion-blog.fun/img/avatar.png" alt="NSOI Logo" class="h-8 w-8 rounded-full mr-2">
             <span class="text-white text-xl font-bold">NSOI 留言板</span>
         </div>
+        <!-- Settings icon button with hardcoded SVG -->
         <button id="gearIcon" class="text-white hover:text-indigo-200 focus:outline-none">
-            <!-- Settings icon will be dynamically loaded here from KV -->
-            <img id="settingsIconImage" src="" alt="设置图标" class="w-6 h-6">
+            <svg t="1753181544601" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1480" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24">
+                <path d="M346.112 59.904c27.52-11.776 64-4.096 84.48 17.472 23.04 24 60.416 48.896 84.352 48.896 23.68 0 61.056-24.576 83.712-47.872 18.624-19.456 50.752-27.328 77.248-19.52l7.808 2.816 2.176 1.088 119.424 66.56c25.088 17.536 35.84 50.112 27.136 78.72l-5.824 15.616a111.104 111.104 0 0 0-5.952 26.048 105.152 105.152 0 0 0 95.68 110.592l8.96 0.448h4.096c28.416 0 50.304 22.784 56.704 56.832l2.24 12.608 1.92 12.544c3.648 25.088 5.952 49.152 5.952 69.568 0 16.256-1.472 34.944-3.904 54.592l-2.048 14.976-2.816 17.6-1.28 7.424c-5.952 31.104-24.704 52.928-49.28 56.384l-6.784 0.448h-4.736c-57.92 0-105.024 47.104-105.024 105.024l0.192 5.184c0.64 6.784 2.176 14.208 4.416 21.76l3.2 9.6 1.344 3.392c12.416 27.84 4.736 61.248-17.92 81.536l-6.592 5.12-2.304 1.536-121.536 66.88c-8.96 3.84-18.56 5.824-28.544 5.824-21.504 0-42.56-8.96-56.448-24.192-22.912-25.28-61.44-52.032-86.08-52.032-23.36 0-62.272 25.792-85.568 50.944-18.56 20.224-50.752 28.544-77.44 20.672l-7.808-2.88-2.496-1.152-117.12-65.792a71.616 71.616 0 0 1-27.072-78.72l5.824-15.552 1.664-5.312c2.24-7.36 3.776-14.592 4.352-21.248l0.256-5.568c0-54.848-42.24-100.032-96-104.64l-8.96-0.384h-4.096c-28.416 0-50.304-22.784-56.704-56.464a111.104 111.104 0 0 1-10.112-94.72c0-31.296 5.44-71.424 10.112-94.656 5.888-31.104 24.64-52.928 49.152-56.32l6.784-0.512h4.8c57.92 0 105.024-47.104 105.024-105.024l-0.192-5.184a108.352 108.352 0 0 0-4.416-21.76l-3.2-9.6-1.408-3.328a71.552 71.552 0 0 1 18.048-81.6l6.592-5.12 2.368-1.536L346.112 59.904z m27.648 84.864l-92.16 50.664 1.792 5.056c4.224 13.184 7.296 27.2 8.576 41.216l0.64 14.016a192.96 192.96 0 0 1-165.632 191.104l-3.904 0.448-1.28 7.936a480 480 0 0 0-4.672 44.096l-0.32 12.992c0 16.32 2.048 36.8 5.056 56.96l1.216 7.936 3.904 0.448a192.96 192.96 0 0 1 165.312 179.584l0.384 11.52c0 18.752-3.648 37.76-9.28 55.424l-1.792 5.056 85.568 47.936 1.344-1.28c7.04-6.912 15.616-14.464 25.088-21.952l9.728-7.424c37.12-27.2 72.96-41.152 106.752-41.152 33.984 0 70.144 14.208 107.52 41.856 12.48 9.344 23.552 18.944 32.832 27.904l3.392 3.392 89.536-49.408-1.792-5.056a195.968 195.648 0 0 1-8.576-41.216l-0.64-14.08a192.96 192.96 0 0 1 165.76-191.104l3.84-0.448 1.28-8.128a480 480 0 0 0 4.672-43.904l0.32-12.864c0-16.256-1.984-36.48-4.992-56.896l-1.344-8.128-3.84-0.448a192.96 192.96 0 0 1-165.376-179.584l-0.32-11.52c0-18.88 3.712-37.952 9.28-55.488l1.728-4.992-88.384-49.024-3.072 2.944a303.36 303.36 0 0 1-23.68 19.648l-9.216 6.72c-36.288 25.6-71.296 38.72-104.064 38.72-33.088 0-68.352-13.44-104.96-39.488a325.76 325.76 0 0 1-32.64-26.496l-3.584-3.52z m136.704 188.608a178.496 178.496 0 0 1 178.24 178.24 178.432 178.432 0 0 1-178.24 178.304A178.432 178.432 0 0 1 332.16 511.616a178.496 178.496 0 0 1 178.24-178.176z m0 88c-49.792 0-90.24 40.512-90.24 90.24 0 49.792 40.448 90.304 90.24 90.304 49.792 0 90.24-40.512 90.24-90.24 0-49.792-40.448-90.304-90.24-90.304z" fill="#ffffff" p-id="1481"></path>
+            </svg>
         </button>
     </nav>
 
@@ -333,48 +355,52 @@
             <button id="adminLogoutBtn" class="btn btn-danger w-full mt-4 hidden">退出管理员</button>
         </div>
 
-        <!-- 管理员设置发言时段 -->
+        <!-- 管理员设置面板 -->
         <div class="p-6 bg-white rounded-xl shadow-md mt-6" id="adminConfigSection" style="display: none;">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">设置发言时段 (管理员)</h2>
-            <div class="space-y-4">
-                <div>
-                    <label for="setStartTime" class="block text-sm font-medium text-gray-700 mb-1">开始时间:</label>
-                    <input type="datetime-local" id="setStartTime" class="input-field" required>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">管理员面板</h2>
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- 左侧导航栏 -->
+                <div id="adminNav" class="md:w-1/4 flex-shrink-0">
+                    <button class="admin-panel-nav-btn active" data-target="postingHoursContent">发言时段设置</button>
+                    <button class="admin-panel-nav-btn" data-target="ipManagementContent">IP 管理</button>
                 </div>
-                <div>
-                    <label for="setEndTime" class="block text-sm font-medium text-gray-700 mb-1">结束时间:</label>
-                    <input type="datetime-local" id="setEndTime" class="input-field" required>
-                </div>
-                <button id="savePostingHoursBtn" class="btn btn-primary w-full">保存设置</button>
-            </div>
-            <p id="postingHoursStatus" class="text-center mt-4 text-sm"></p>
 
-            <!-- IP 管理 -->
-            <h3 class="text-xl font-semibold text-gray-700 mt-6 mb-4">IP 管理</h3>
-            <div class="space-y-4">
-                <div>
-                    <label for="ipAddressInput" class="block text-sm font-medium text-gray-700 mb-1">IP 地址:</label>
-                    <input type="text" id="ipAddressInput" class="input-field" placeholder="例如: 192.168.1.1" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" title="请输入有效的IPv4地址" required>
-                </div>
-                <div class="flex space-x-4">
-                    <button id="banIpBtn" class="btn btn-danger w-1/2">封禁 IP</button>
-                    <button id="unbanIpBtn" class="btn btn-secondary w-1/2">解封 IP</button>
-                </div>
-                <p id="ipManagementStatus" class="text-center mt-2 text-sm"></p>
-            </div>
+                <!-- 右侧内容区域 -->
+                <div id="adminContentArea" class="md:w-3/4 flex-grow">
+                    <!-- 设置发言时段内容 -->
+                    <div id="postingHoursContent" class="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">设置发言时段</h3>
+                        <div>
+                            <label for="setStartTime" class="block text-sm font-medium text-gray-700 mb-1">开始时间:</label>
+                            <input type="datetime-local" id="setStartTime" class="input-field" required>
+                        </div>
+                        <div>
+                            <label for="setEndTime" class="block text-sm font-medium text-gray-700 mb-1">结束时间:</label>
+                            <input type="datetime-local" id="setEndTime" class="input-field" required>
+                        </div>
+                        <button id="savePostingHoursBtn" class="btn btn-primary w-full">保存设置</button>
+                        <p id="postingHoursStatus" class="text-center mt-4 text-sm"></p>
+                    </div>
 
-            <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-2">已封禁 IP 列表:</h4>
-            <div id="bannedIpList" class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
-                <p class="text-gray-500 text-sm text-center">加载中...</p>
-            </div>
+                    <!-- IP 管理内容 -->
+                    <div id="ipManagementContent" class="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50 hidden">
+                        <h3 class="text-xl font-semibold text-gray-700 mb-4">IP 管理</h3>
+                        <div>
+                            <label for="ipAddressInput" class="block text-sm font-medium text-gray-700 mb-1">IP 地址:</label>
+                            <input type="text" id="ipAddressInput" class="input-field" placeholder="例如: 192.168.1.1" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" title="请输入有效的IPv4地址" required>
+                        </div>
+                        <div class="flex space-x-4">
+                            <button id="banIpBtn" class="btn btn-danger w-1/2">封禁 IP</button>
+                            <button id="unbanIpBtn" class="btn btn-secondary w-1/2">解封 IP</button>
+                        </div>
+                        <p id="ipManagementStatus" class="text-center mt-2 text-sm"></p>
 
-            <!-- New: Admin section for SVG Icon Upload - MOVED HERE -->
-            <div id="adminSvgUploadSection" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <h3 class="text-xl font-semibold text-gray-700 mb-3">上传设置图标 (SVG)</h3>
-                <p class="text-sm text-gray-600 mb-3">请粘贴 Base64 编码的 SVG 字符串 (以 `data:image/svg+xml;base64,` 开头)。</p>
-                <textarea id="svgBase64Input" class="input-field text-xs" rows="4" placeholder="粘贴 Base64 编码的 SVG 字符串..." required></textarea>
-                <button id="uploadSvgBtn" class="btn btn-primary w-full mt-2">上传 SVG 图标</button>
-                <p id="svgUploadStatus" class="text-center mt-2 text-sm"></p>
+                        <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-2">已封禁 IP 列表:</h4>
+                        <div id="bannedIpList" class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+                            <p class="text-gray-500 text-sm text-center">加载中...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -427,15 +453,14 @@
             // Elements for settings modal
             settingsModal: document.getElementById('settingsModal'),
             gearIcon: document.getElementById('gearIcon'),
-            settingsIconImage: document.getElementById('settingsIconImage'), // ID for the settings icon image
             closeSettingsModalBtn: document.getElementById('closeSettingsModalBtn'),
             refreshMessagesBtn: document.getElementById('refreshMessagesBtn'),
             deleteTermsCookieBtn: document.getElementById('deleteTermsCookieBtn'),
-            // Elements for Admin SVG Upload (now directly in adminConfigSection)
-            adminSvgUploadSection: document.getElementById('adminSvgUploadSection'),
-            svgBase64Input: document.getElementById('svgBase64Input'),
-            uploadSvgBtn: document.getElementById('uploadSvgBtn'),
-            svgUploadStatus: document.getElementById('svgUploadStatus')
+            // New admin panel elements
+            adminNav: document.getElementById('adminNav'),
+            adminNavButtons: null, // Will be populated after DOMContentLoaded
+            postingHoursContent: document.getElementById('postingHoursContent'),
+            ipManagementContent: document.getElementById('ipManagementContent')
         };
 
         // --- Utility Functions ---
@@ -912,73 +937,6 @@
             }
         }
 
-        /**
-         * Fetches the settings icon (SVG Base64) from the backend.
-         */
-        async function fetchSettingsIcon() {
-            try {
-                const response = await fetch(`${WORKER_URL}/settings-icon`);
-                if (!response.ok) {
-                    throw new Error(`HTTP Error! Status: ${response.status}`);
-                }
-                const result = await response.json();
-                if (result.success && result.svgBase64) {
-                    elements.settingsIconImage.src = result.svgBase64;
-                    elements.settingsIconImage.alt = "设置图标";
-                } else {
-                    console.warn("Failed to fetch custom settings icon, using default or no icon.");
-                    // Fallback to a generic icon or hide if no default is desired
-                    elements.settingsIconImage.src = ''; // Clear src if no icon
-                }
-            } catch (error) {
-                console.error('Error fetching settings icon:', error);
-                elements.settingsIconImage.src = ''; // Clear src on error
-            }
-        }
-
-        /**
-         * Sends a new Base64 encoded SVG string for the settings icon to the backend (admin only).
-         * @param {string} svgBase64 - The Base64 encoded SVG string.
-         */
-        async function setSettingsIcon(svgBase64) {
-            console.log('Attempting to upload SVG. Current adminSessionKey:', adminSessionKey); // Debug log
-            try {
-                const response = await fetch(`${WORKER_URL}/admin/settings-icon`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey, // <-- This is where the session key is sent
-                    },
-                    body: JSON.stringify({ svgBase64 }),
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401 && isAdmin) {
-                        showCustomAlert('管理员会话已过期或无效，请重新登录。');
-                        adminLogout();
-                        return;
-                    }
-                    const errorText = await response.text();
-                    throw new Error(`HTTP Error! Status: ${response.status}, Message: ${errorText}`);
-                }
-
-                const result = await response.json();
-                if (result.success) {
-                    elements.svgUploadStatus.textContent = 'SVG 图标上传成功！';
-                    elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-green-600';
-                    elements.svgBase64Input.value = ''; // Clear input
-                    await fetchSettingsIcon(); // Refresh the displayed icon
-                } else {
-                    elements.svgUploadStatus.textContent = `上传失败: ${result.message || '未知错误'}`;
-                    elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
-                }
-            } catch (error) {
-                console.error('Failed to upload SVG icon:', error);
-                elements.svgUploadStatus.textContent = '上传 SVG 图标失败。' + (error.message || '');
-                elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
-            }
-        }
-
         // --- UI Rendering Functions ---
 
         /**
@@ -1119,8 +1077,6 @@
         function showSettingsModal() {
             elements.settingsModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Disable scrolling on body
-            // The adminSvgUploadSection is now in adminConfigSection, so no need to manage its display here.
-            // Its visibility will be controlled by adminConfigSection's display property.
         }
 
         /**
@@ -1129,6 +1085,24 @@
         function hideSettingsModal() {
             elements.settingsModal.classList.add('hidden');
             document.body.style.overflow = ''; // Re-enable scrolling on body
+        }
+
+        /**
+         * Shows a specific admin content section and updates active nav button.
+         * @param {string} sectionId - The ID of the content section to show (e.g., 'postingHoursContent').
+         */
+        function showAdminSection(sectionId) {
+            // Hide all content sections
+            elements.postingHoursContent.classList.add('hidden');
+            elements.ipManagementContent.classList.add('hidden');
+
+            // Remove 'active' class from all nav buttons
+            elements.adminNavButtons.forEach(btn => btn.classList.remove('active'));
+
+            // Show the selected content section
+            document.getElementById(sectionId).classList.remove('hidden');
+            // Add 'active' class to the corresponding nav button
+            document.querySelector(`.admin-panel-nav-btn[data-target="${sectionId}"]`).classList.add('active');
         }
 
         // --- Event Handlers ---
@@ -1184,7 +1158,7 @@
                     elements.adminLogoutBtn.classList.remove('hidden');
                     elements.adminLoginForm.classList.add('hidden');
                     elements.adminConfigSection.style.display = 'block';
-                    console.log('Admin login successful. Session Key:', adminSessionKey); // Debug log
+                    showAdminSection('postingHoursContent'); // Show default admin section
                     await updateUI(); // Refresh UI after login
                 } else {
                     isAdmin = false;
@@ -1193,7 +1167,6 @@
                     localStorage.removeItem('adminSessionKey');
                     elements.adminStatusText.textContent = '密码错误。';
                     elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
-                    console.log('Admin login failed. Session Key cleared.'); // Debug log
                 }
             } catch (error) {
                 console.error('Admin login failed:', error);
@@ -1217,7 +1190,6 @@
             elements.adminLogoutBtn.classList.add('hidden');
             elements.adminLoginForm.classList.remove('hidden');
             elements.adminConfigSection.style.display = 'none';
-            console.log('Admin logged out. Session Key cleared.'); // Debug log
             updateUI(); // Refresh UI
         }
 
@@ -1315,25 +1287,6 @@
             showTermsModal(); // Re-show the terms modal immediately
         }
 
-        /**
-         * Handles uploading a new SVG icon via Base64 string.
-         */
-        async function handleUploadSvgIcon() {
-            const svgBase64 = elements.svgBase64Input.value.trim();
-            if (!svgBase64) {
-                elements.svgUploadStatus.textContent = '请粘贴 Base64 编码的 SVG 字符串。';
-                elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
-                return;
-            }
-            // Basic validation: check if it starts with the correct prefix
-            if (!svgBase64.startsWith('data:image/svg+xml;base64,')) {
-                elements.svgUploadStatus.textContent = '无效的 SVG Base64 格式。必须以 "data:image/svg+xml;base64," 开头。';
-                elements.svgUploadStatus.className = 'text-center mt-2 text-sm text-red-600';
-                return;
-            }
-            await setSettingsIcon(svgBase64);
-        }
-
         // --- Event Listener Setup Functions ---
 
         /**
@@ -1416,8 +1369,14 @@
             elements.refreshMessagesBtn.addEventListener('click', handleRefreshMessages);
             elements.deleteTermsCookieBtn.addEventListener('click', handleDeleteTermsCookie);
 
-            // Admin SVG Upload event listener (now in adminConfigSection)
-            elements.uploadSvgBtn.addEventListener('click', handleUploadSvgIcon);
+            // Admin panel navigation event listeners
+            elements.adminNavButtons = elements.adminNav.querySelectorAll('.admin-panel-nav-btn');
+            elements.adminNavButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const targetSectionId = e.target.dataset.target;
+                    showAdminSection(targetSectionId);
+                });
+            });
         }
 
         // --- Core Application Logic ---
@@ -1429,13 +1388,9 @@
             const messages = await fetchMessages();
             renderMessages(messages);
             await fetchConfig();
-            await fetchSettingsIcon(); // Fetch and update settings icon on UI update
             if (isAdmin) {
                 const bannedIps = await fetchBannedIps();
                 renderBannedIps(bannedIps);
-                elements.adminSvgUploadSection.style.display = 'block'; // Explicitly show SVG upload section for admin
-            } else {
-                elements.adminSvgUploadSection.style.display = 'none'; // Explicitly hide for non-admin
             }
             updateAdminSectionVisibility();
         }
@@ -1450,16 +1405,14 @@
                 elements.adminLogoutBtn.classList.remove('hidden');
                 elements.adminLoginForm.classList.add('hidden');
                 elements.adminConfigSection.style.display = 'block';
-                // Explicitly set display for adminSvgUploadSection
-                elements.adminSvgUploadSection.style.display = 'block'; 
+                // Ensure a default section is shown when admin panel becomes visible
+                showAdminSection('postingHoursContent'); 
             } else {
                 elements.adminStatusText.textContent = '未登录管理员。';
                 elements.adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
                 elements.adminLogoutBtn.classList.add('hidden');
                 elements.adminLoginForm.classList.remove('hidden');
                 elements.adminConfigSection.style.display = 'none';
-                // Explicitly set display for adminSvgUploadSection
-                elements.adminSvgUploadSection.style.display = 'none';
             }
         }
 
@@ -1489,7 +1442,7 @@
                 localStorage.removeItem('isAdmin');
                 localStorage.removeItem('adminSessionKey');
             }
-            console.log('Guestbook initialized. isAdmin:', isAdmin, 'adminSessionKey:', adminSessionKey); // Debug log
+            
             updateUI();
         }
 
