@@ -276,14 +276,7 @@
                 <button id="refreshMessagesBtn" class="btn btn-secondary w-full">刷新留言</button>
                 <button id="deleteTermsCookieBtn" class="btn btn-secondary w-full">删除“今日不再显示”Cookie</button>
             </div>
-            <!-- New: Admin section for SVG Icon Upload -->
-            <div id="adminSvgUploadSection" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200" style="display: none;">
-                <h3 class="text-xl font-semibold text-gray-700 mb-3">上传设置图标 (SVG)</h3>
-                <p class="text-sm text-gray-600 mb-3">请粘贴 Base64 编码的 SVG 字符串 (以 `data:image/svg+xml;base64,` 开头)。</p>
-                <textarea id="svgBase64Input" class="input-field text-xs" rows="4" placeholder="粘贴 Base64 编码的 SVG 字符串..." required></textarea>
-                <button id="uploadSvgBtn" class="btn btn-primary w-full mt-2">上传 SVG 图标</button>
-                <p id="svgUploadStatus" class="text-center mt-2 text-sm"></p>
-            </div>
+            <!-- The adminSvgUploadSection has been moved to adminConfigSection -->
         </div>
     </div>
 
@@ -374,6 +367,15 @@
             <div id="bannedIpList" class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
                 <p class="text-gray-500 text-sm text-center">加载中...</p>
             </div>
+
+            <!-- New: Admin section for SVG Icon Upload - MOVED HERE -->
+            <div id="adminSvgUploadSection" class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-700 mb-3">上传设置图标 (SVG)</h3>
+                <p class="text-sm text-gray-600 mb-3">请粘贴 Base64 编码的 SVG 字符串 (以 `data:image/svg+xml;base64,` 开头)。</p>
+                <textarea id="svgBase64Input" class="input-field text-xs" rows="4" placeholder="粘贴 Base64 编码的 SVG 字符串..." required></textarea>
+                <button id="uploadSvgBtn" class="btn btn-primary w-full mt-2">上传 SVG 图标</button>
+                <p id="svgUploadStatus" class="text-center mt-2 text-sm"></p>
+            </div>
         </div>
     </div>
 
@@ -425,11 +427,11 @@
             // Elements for settings modal
             settingsModal: document.getElementById('settingsModal'),
             gearIcon: document.getElementById('gearIcon'),
-            settingsIconImage: document.getElementById('settingsIconImage'), // New: ID for the settings icon image
+            settingsIconImage: document.getElementById('settingsIconImage'), // ID for the settings icon image
             closeSettingsModalBtn: document.getElementById('closeSettingsModalBtn'),
             refreshMessagesBtn: document.getElementById('refreshMessagesBtn'),
             deleteTermsCookieBtn: document.getElementById('deleteTermsCookieBtn'),
-            // New elements for Admin SVG Upload
+            // Elements for Admin SVG Upload (now directly in adminConfigSection)
             adminSvgUploadSection: document.getElementById('adminSvgUploadSection'),
             svgBase64Input: document.getElementById('svgBase64Input'),
             uploadSvgBtn: document.getElementById('uploadSvgBtn'),
@@ -1116,12 +1118,8 @@
         function showSettingsModal() {
             elements.settingsModal.classList.remove('hidden');
             document.body.style.overflow = 'hidden'; // Disable scrolling on body
-            // Show/hide admin SVG upload section based on admin status
-            if (isAdmin) {
-                elements.adminSvgUploadSection.style.display = 'block';
-            } else {
-                elements.adminSvgUploadSection.style.display = 'none';
-            }
+            // The adminSvgUploadSection is now in adminConfigSection, so no need to manage its display here.
+            // Its visibility will be controlled by adminConfigSection's display property.
         }
 
         /**
@@ -1414,7 +1412,7 @@
             elements.refreshMessagesBtn.addEventListener('click', handleRefreshMessages);
             elements.deleteTermsCookieBtn.addEventListener('click', handleDeleteTermsCookie);
 
-            // Admin SVG Upload event listener
+            // Admin SVG Upload event listener (now in adminConfigSection)
             elements.uploadSvgBtn.addEventListener('click', handleUploadSvgIcon);
         }
 
@@ -1428,12 +1426,12 @@
             renderMessages(messages);
             await fetchConfig();
             await fetchSettingsIcon(); // Fetch and update settings icon on UI update
+            // The adminSvgUploadSection's display is now controlled by adminConfigSection's display
+            // which is handled by updateAdminSectionVisibility().
+            // No explicit elements.adminSvgUploadSection.style.display = 'block'/'none' needed here.
             if (isAdmin) {
                 const bannedIps = await fetchBannedIps();
                 renderBannedIps(bannedIps);
-                elements.adminSvgUploadSection.style.display = 'block'; // Show SVG upload section for admin
-            } else {
-                elements.adminSvgUploadSection.style.display = 'none'; // Hide for non-admin
             }
             updateAdminSectionVisibility();
         }
@@ -1448,6 +1446,10 @@
                 elements.adminLogoutBtn.classList.remove('hidden');
                 elements.adminLoginForm.classList.add('hidden');
                 elements.adminConfigSection.style.display = 'block';
+                // Since adminSvgUploadSection is now inside adminConfigSection, it will be visible
+                // when adminConfigSection is visible.
+                // If you want to explicitly hide/show it based on some other admin panel sub-navigation,
+                // you would add that logic here. For now, it's always visible when adminConfigSection is.
             } else {
                 elements.adminStatusText.textContent = '未登录管理员。';
                 elements.adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
