@@ -941,12 +941,13 @@
          * @param {string} svgBase64 - The Base64 encoded SVG string.
          */
         async function setSettingsIcon(svgBase64) {
+            console.log('Attempting to upload SVG. Current adminSessionKey:', adminSessionKey); // Debug log
             try {
                 const response = await fetch(`${WORKER_URL}/admin/settings-icon`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Admin-Session': adminSessionKey,
+                        'X-Admin-Session': adminSessionKey, // <-- This is where the session key is sent
                     },
                     body: JSON.stringify({ svgBase64 }),
                 });
@@ -1183,6 +1184,7 @@
                     elements.adminLogoutBtn.classList.remove('hidden');
                     elements.adminLoginForm.classList.add('hidden');
                     elements.adminConfigSection.style.display = 'block';
+                    console.log('Admin login successful. Session Key:', adminSessionKey); // Debug log
                     await updateUI(); // Refresh UI after login
                 } else {
                     isAdmin = false;
@@ -1191,6 +1193,7 @@
                     localStorage.removeItem('adminSessionKey');
                     elements.adminStatusText.textContent = '密码错误。';
                     elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
+                    console.log('Admin login failed. Session Key cleared.'); // Debug log
                 }
             } catch (error) {
                 console.error('Admin login failed:', error);
@@ -1214,6 +1217,7 @@
             elements.adminLogoutBtn.classList.add('hidden');
             elements.adminLoginForm.classList.remove('hidden');
             elements.adminConfigSection.style.display = 'none';
+            console.log('Admin logged out. Session Key cleared.'); // Debug log
             updateUI(); // Refresh UI
         }
 
@@ -1426,12 +1430,12 @@
             renderMessages(messages);
             await fetchConfig();
             await fetchSettingsIcon(); // Fetch and update settings icon on UI update
-            // The adminSvgUploadSection's display is now controlled by adminConfigSection's display
-            // which is handled by updateAdminSectionVisibility().
-            // No explicit elements.adminSvgUploadSection.style.display = 'block'/'none' needed here.
             if (isAdmin) {
                 const bannedIps = await fetchBannedIps();
                 renderBannedIps(bannedIps);
+                elements.adminSvgUploadSection.style.display = 'block'; // Explicitly show SVG upload section for admin
+            } else {
+                elements.adminSvgUploadSection.style.display = 'none'; // Explicitly hide for non-admin
             }
             updateAdminSectionVisibility();
         }
@@ -1446,16 +1450,16 @@
                 elements.adminLogoutBtn.classList.remove('hidden');
                 elements.adminLoginForm.classList.add('hidden');
                 elements.adminConfigSection.style.display = 'block';
-                // Since adminSvgUploadSection is now inside adminConfigSection, it will be visible
-                // when adminConfigSection is visible.
-                // If you want to explicitly hide/show it based on some other admin panel sub-navigation,
-                // you would add that logic here. For now, it's always visible when adminConfigSection is.
+                // Explicitly set display for adminSvgUploadSection
+                elements.adminSvgUploadSection.style.display = 'block'; 
             } else {
                 elements.adminStatusText.textContent = '未登录管理员。';
                 elements.adminStatusText.className = 'text-center mt-4 text-sm text-gray-600';
                 elements.adminLogoutBtn.classList.add('hidden');
                 elements.adminLoginForm.classList.remove('hidden');
                 elements.adminConfigSection.style.display = 'none';
+                // Explicitly set display for adminSvgUploadSection
+                elements.adminSvgUploadSection.style.display = 'none';
             }
         }
 
@@ -1485,7 +1489,7 @@
                 localStorage.removeItem('isAdmin');
                 localStorage.removeItem('adminSessionKey');
             }
-            
+            console.log('Guestbook initialized. isAdmin:', isAdmin, 'adminSessionKey:', adminSessionKey); // Debug log
             updateUI();
         }
 
