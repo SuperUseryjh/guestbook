@@ -11,12 +11,13 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* 与页脚背景色保持一致 */
+            background-color: #f0f2f5; /* Light mode background color */
             padding-top: 4rem; /* Add padding to body to prevent content from being hidden by fixed navbar */
+            color: #1f2937; /* Default text color for light mode */
         }
         .container {
             max-width: 800px;
-            margin: 2rem auto; /* 保持居中：上下外边距2rem，左右外边距自动分配以实现水平居中 */
+            margin: 2rem auto; /* 保持居中 */
             padding: 1.5rem;
             background-color: #ffffff;
             border-radius: 1rem;
@@ -49,15 +50,13 @@
             flex-shrink: 0;
             margin-left: 1rem;
             display: flex; /* To align buttons horizontally */
-            flex-wrap: wrap; /* Allow wrapping on smaller screens */
             gap: 0.5rem; /* Spacing between buttons */
-            align-items: center; /* Vertically align items */
         }
         .btn {
             padding: 0.5rem 1rem;
             border-radius: 0.5rem;
             font-weight: 600;
-            transition: background-color 0.2s ease-in-out;
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
         }
         .btn-primary {
             background-color: #4f46e5;
@@ -90,10 +89,13 @@
         .input-field {
             width: 100%;
             padding: 0.75rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid #d1d5db; /* Light mode border color */
             border-radius: 0.5rem;
             margin-bottom: 1rem;
             box-sizing: border-box;
+            transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+            background-color: #ffffff; /* Light mode input background */
+            color: #1f2937; /* Light mode input text */
         }
         textarea.input-field {
             min-height: 100px;
@@ -112,6 +114,7 @@
             padding: 0.75rem;
             margin-bottom: 0.5rem;
             font-size: 0.9rem;
+            color: #1f2937; /* Light mode reply text */
         }
         .admin-reply-badge {
             background-color: #fcd34d; /* Yellow for admin replies */
@@ -122,7 +125,6 @@
             font-weight: 600;
             margin-left: 0.5rem;
         }
-        /* New style for admin message badge */
         .admin-message-badge {
             background-color: #34d399; /* Green for admin messages */
             color: #065f46;
@@ -132,7 +134,6 @@
             font-weight: 600;
             margin-left: 0.5rem;
         }
-        /* New style for pinned message badge */
         .pinned-badge {
             background-color: #a78bfa; /* Purple for pinned messages */
             color: #4c1d95;
@@ -160,7 +161,7 @@
             border-bottom: none;
         }
 
-        /* Modal Styles */
+        /* Modal Specific Styles for fixed positioning and backdrop */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -173,39 +174,6 @@
             align-items: center;
             z-index: 1000;
         }
-        .modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-        }
-        .modal-content h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            color: #333;
-        }
-        .modal-content p {
-            font-size: 1rem;
-            line-height: 1.6;
-            color: #555;
-            text-align: left;
-            margin-bottom: 1.5rem;
-            max-height: 200px; /* Limit height for scroll */
-            overflow-y: auto; /* Enable scroll if content overflows */
-            border: 1px solid #e2e8f0;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            background-color: #f8fafc;
-        }
-        .modal-content button {
-            margin-top: 1rem;
-        }
-
-        /* Settings Modal specific styles */
         .settings-modal-overlay {
             position: fixed;
             top: 0;
@@ -219,16 +187,6 @@
             align-items: center;
             z-index: 1000;
         }
-        .settings-modal-content {
-            background-color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            position: relative; /* For close button positioning */
-        }
         .settings-modal-close-btn {
             position: absolute;
             top: 1rem;
@@ -237,40 +195,39 @@
             border: none;
             font-size: 1.5rem;
             cursor: pointer;
-            color: #6b7280;
+            color: #6b7280; /* Default color */
+            transition: color 0.3s ease;
         }
         .settings-modal-close-btn:hover {
-            color: #374151;
+            color: #374151; /* Default hover color */
         }
 
-        /* Admin Panel Specific Styles */
+        /* Admin Panel Navigation Button Styles */
         .admin-panel-nav-btn {
             display: block;
             width: 100%;
             padding: 0.75rem 1rem;
             text-align: left;
-            background-color: #e2e8f0;
-            color: #333;
             border-radius: 0.5rem;
             margin-bottom: 0.5rem;
             transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
         }
         .admin-panel-nav-btn:hover {
-            background-color: #cbd5e1;
+            background-color: #d1d5db; /* Light mode hover */
         }
         .admin-panel-nav-btn.active {
-            background-color: #4f46e5;
-            color: white;
             font-weight: 600;
+            background-color: #4f46e5; /* Indigo-600 */
+            color: #ffffff;
         }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col min-h-screen">
+<body class="bg-gray-100 text-gray-900 flex flex-col min-h-screen">
     <!-- Usage Terms Modal -->
     <div id="termsModal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <h2>使用须知</h2>
-            <p>
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">使用须知</h2>
+            <p class="text-base text-gray-700 text-left mb-4 max-h-60 overflow-y-auto border border-gray-200 p-3 rounded-md bg-gray-50">
                 欢迎使用留言板！为了维护良好的社区环境，请您在使用前仔细阅读以下须知：<br><br>
                 1. 请勿发布任何违法、色情、暴力、歧视、人身攻击或侵犯他人权益的内容。<br>
                 2. 请勿发布垃圾信息、广告或与本留言板主题无关的内容。<br>
@@ -281,21 +238,21 @@
                 感谢您的理解与配合！
             </p>
             <div class="flex items-center justify-center mt-4 mb-4">
-                <input type="checkbox" id="hideTermsTodayCheckbox" class="mr-2">
+                <input type="checkbox" id="hideTermsTodayCheckbox" class="mr-2 form-checkbox h-4 w-4 text-indigo-600">
                 <label for="hideTermsTodayCheckbox" class="text-sm text-gray-700">今日不再显示</label>
             </div>
-            <button id="agreeTermsBtn" class="btn btn-primary w-full">我已阅读并同意</button>
+            <button id="agreeTermsBtn" class="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full">我已阅读并同意</button>
         </div>
     </div>
 
     <!-- Settings Modal -->
     <div id="settingsModal" class="settings-modal-overlay hidden">
-        <div class="settings-modal-content">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center relative">
             <button id="closeSettingsModalBtn" class="settings-modal-close-btn">&times;</button>
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">实用工具</h2>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">实用工具</h2>
             <div class="flex flex-col space-y-4">
-                <button id="refreshMessagesBtn" class="btn btn-secondary w-full">刷新留言</button>
-                <button id="deleteTermsCookieBtn" class="btn btn-secondary w-full">删除“今日不再显示”Cookie</button>
+                <button id="refreshMessagesBtn" class="btn bg-gray-600 hover:bg-gray-700 text-white w-full">刷新留言</button>
+                <button id="deleteTermsCookieBtn" class="btn bg-gray-600 hover:bg-gray-700 text-white w-full">删除“今日不再显示”Cookie</button>
             </div>
         </div>
     </div>
@@ -306,26 +263,28 @@
             <img src="https://mr-onion-blog.fun/img/avatar.png" alt="NSOI Logo" class="h-8 w-8 rounded-full mr-2">
             <span class="text-white text-xl font-bold">NSOI 留言板</span>
         </div>
-        <!-- Settings icon button with hardcoded SVG -->
-        <button id="gearIcon" class="text-white hover:text-indigo-200 focus:outline-none">
-            <svg t="1753181544601" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1480" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24">
-                <path d="M346.112 59.904c27.52-11.776 64-4.096 84.48 17.472 23.04 24 60.416 48.896 84.352 48.896 23.68 0 61.056-24.576 83.712-47.872 18.624-19.456 50.752-27.328 77.248-19.52l7.808 2.816 2.176 1.088 119.424 66.56c25.088 17.536 35.84 50.112 27.136 78.72l-5.824 15.616a111.104 111.104 0 0 0-5.952 26.048 105.152 105.152 0 0 0 95.68 110.592l8.96 0.448h4.096c28.416 0 50.304 22.784 56.704 56.832l2.24 12.608 1.92 12.544c3.648 25.088 5.952 49.152 5.952 69.568 0 16.256-1.472 34.944-3.904 54.592l-2.048 14.976-2.816 17.6-1.28 7.424c-5.952 31.104-24.704 52.928-49.28 56.384l-6.784 0.448h-4.736c-57.92 0-105.024 47.104-105.024 105.024l0.192 5.184c0.64 6.784 2.176 14.208 4.416 21.76l3.2 9.6 1.344 3.392c12.416 27.84 4.736 61.248-17.92 81.536l-6.592 5.12-2.304 1.536-121.536 66.88c-8.96 3.84-18.56 5.824-28.544 5.824-21.504 0-42.56-8.96-56.448-24.192-22.912-25.28-61.44-52.032-86.08-52.032-23.36 0-62.272 25.792-85.568 50.944-18.56 20.224-50.752 28.544-77.44 20.672l-7.808-2.88-2.496-1.152-117.12-65.792a71.616 71.616 0 0 1-27.072-78.72l5.824-15.552 1.664-5.312c2.24-7.36 3.776-14.592 4.352-21.248l0.256-5.568c0-54.848-42.24-100.032-96-104.64l-8.96-0.384h-4.096c-28.416 0-50.304-22.784-56.704-56.464a111.104 111.104 0 0 1-10.112-94.72c0-31.296 5.44-71.424 10.112-94.656 5.888-31.104 24.64-52.928 49.152-56.32l6.784-0.512h4.8c57.92 0 105.024-47.104 105.024-105.024l-0.192-5.184a108.352 108.352 0 0 0-4.416-21.76l-3.2-9.6-1.408-3.328a71.552 71.552 0 0 1 18.048-81.6l6.592-5.12 2.368-1.536L346.112 59.904z m27.648 84.864l-92.16 50.664 1.792 5.056c4.224 13.184 7.296 27.2 8.576 41.216l0.64 14.016a192.96 192.96 0 0 1-165.632 191.104l-3.904 0.448-1.28 7.936a480 480 0 0 0-4.672 44.096l-0.32 12.992c0 16.32 2.048 36.8 5.056 56.96l1.216 7.936 3.904 0.448a192.96 192.96 0 0 1 165.312 179.584l0.384 11.52c0 18.752-3.648 37.76-9.28 55.424l-1.792 5.056 85.568 47.936 1.344-1.28c7.04-6.912 15.616-14.464 25.088-21.952l9.728-7.424c37.12-27.2 72.96-41.152 106.752-41.152 33.984 0 70.144 14.208 107.52 41.856 12.48 9.344 23.552 18.944 32.832 27.904l3.392 3.392 89.536-49.408-1.792-5.056a195.968 195.648 0 0 1-8.576-41.216l-0.64-14.08a192.96 192.96 0 0 1 165.76-191.104l3.84-0.448 1.28-8.128a480 480 0 0 0 4.672-43.904l0.32-12.864c0-16.256-1.984-36.48-4.992-56.896l-1.344-8.128-3.84-0.448a192.96 192.96 0 0 1-165.376-179.584l-0.32-11.52c0-18.88 3.712-37.952 9.28-55.488l1.728-4.992-88.384-49.024-3.072 2.944a303.36 303.36 0 0 1-23.68 19.648l-9.216 6.72c-36.288 25.6-71.296 38.72-104.064 38.72-33.088 0-68.352-13.44-104.96-39.488a325.76 325.76 0 0 1-32.64-26.496l-3.584-3.52z m136.704 188.608a178.496 178.496 0 0 1 178.24 178.24 178.432 178.432 0 0 1-178.24 178.304A178.432 178.432 0 0 1 332.16 511.616a178.496 178.496 0 0 1 178.24-178.176z m0 88c-49.792 0-90.24 40.512-90.24 90.24 0 49.792 40.448 90.304 90.24 90.304 49.792 0 90.24-40.512 90.24-90.24 0-49.792-40.448-90.304-90.24-90.304z" fill="#ffffff" p-id="1481"></path>
-            </svg>
-        </button>
+        <div class="flex items-center space-x-4">
+            <!-- Settings icon button with hardcoded SVG -->
+            <button id="gearIcon" class="text-white hover:text-indigo-200 focus:outline-none">
+                <svg t="1753181544601" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1480" xmlns:xlink="http://www.w3.org/1999/xlink" width="24" height="24">
+                    <path d="M346.112 59.904c27.52-11.776 64-4.096 84.48 17.472 23.04 24 60.416 48.896 84.352 48.896 23.68 0 61.056-24.576 83.712-47.872 18.624-19.456 50.752-27.328 77.248-19.52l7.808 2.816 2.176 1.088 119.424 66.56c25.088 17.536 35.84 50.112 27.136 78.72l-5.824 15.616a111.104 111.104 0 0 0-5.952 26.048 105.152 105.152 0 0 0 95.68 110.592l8.96 0.448h4.096c28.416 0 50.304 22.784 56.704 56.832l2.24 12.608 1.92 12.544c3.648 25.088 5.952 49.152 5.952 69.568 0 16.256-1.472 34.944-3.904 54.592l-2.048 14.976-2.816 17.6-1.28 7.424c-5.952 31.104-24.704 52.928-49.28 56.384l-6.784 0.448h-4.736c-57.92 0-105.024 47.104-105.024 105.024l0.192 5.184c0.64 6.784 2.176 14.208 4.416 21.76l3.2 9.6 1.344 3.392c12.416 27.84 4.736 61.248-17.92 81.536l-6.592 5.12-2.304 1.536-121.536 66.88c-8.96 3.84-18.56 5.824-28.544 5.824-21.504 0-42.56-8.96-56.448-24.192-22.912-25.28-61.44-52.032-86.08-52.032-23.36 0-62.272 25.792-85.568 50.944-18.56 20.224-50.752 28.544-77.44 20.672l-7.808-2.88-2.496-1.152-117.12-65.792a71.616 71.616 0 0 1-27.072-78.72l5.824-15.552 1.664-5.312c2.24-7.36 3.776-14.592 4.352-21.248l0.256-5.568c0-54.848-42.24-100.032-96-104.64l-8.96-0.384h-4.096c-28.416 0-50.304-22.784-56.704-56.464a111.104 111.104 0 0 1-10.112-94.72c0-31.296 5.44-71.424 10.112-94.656 5.888-31.104 24.64-52.928 49.152-56.32l6.784-0.512h4.8c57.92 0 105.024-47.104 105.024-105.024l-0.192-5.184a108.352 108.352 0 0 0-4.416-21.76l-3.2-9.6-1.408-3.328a71.552 71.552 0 0 1 18.048-81.6l6.592-5.12 2.368-1.536L346.112 59.904z m27.648 84.864l-92.16 50.664 1.792 5.056c4.224 13.184 7.296 27.2 8.576 41.216l0.64 14.016a192.96 192.96 0 0 1-165.632 191.104l-3.904 0.448-1.28 7.936a480 480 0 0 0-4.672 44.096l-0.32 12.992c0 16.32 2.048 36.8 5.056 56.96l1.216 7.936 3.904 0.448a192.96 192.96 0 0 1 165.312 179.584l0.384 11.52c0 18.752-3.648 37.76-9.28 55.424l-1.792 5.056 85.568 47.936 1.344-1.28c7.04-6.912 15.616-14.464 25.088-21.952l9.728-7.424c37.12-27.2 72.96-41.152 106.752-41.152 33.984 0 70.144 14.208 107.52 41.856 12.48 9.344 23.552 18.944 32.832 27.904l3.392 3.392 89.536-49.408-1.792-5.056a195.968 195.648 0 0 1-8.576-41.216l-0.64-14.08a192.96 192.96 0 0 1 165.76-191.104l3.84-0.448 1.28-8.128a480 480 0 0 0 4.672-43.904l0.32-12.864c0-16.256-1.984-36.48-4.992-56.896l-1.344-8.128-3.84-0.448a192.96 192.96 0 0 1-165.376-179.584l-0.32-11.52c0-18.88 3.712-37.952 9.28-55.488l1.728-4.992-88.384-49.024-3.072 2.944a303.36 303.36 0 0 1-23.68 19.648l-9.216 6.72c-36.288 25.6-71.296 38.72-104.064 38.72-33.088 0-68.352-13.44-104.96-39.488a325.76 325.76 0 0 1-32.64-26.496l-3.584-3.52z m136.704 188.608a178.496 178.496 0 0 1 178.24 178.24 178.432 178.432 0 0 1-178.24 178.304A178.432 178.432 0 0 1 332.16 511.616a178.496 178.496 0 0 1 178.24-178.176z m0 88c-49.792 0-90.24 40.512-90.24 90.24 0 49.792 40.448 90.304 90.24 90.304 49.792 0 90.24-40.512 90.24-90.24 0-49.792-40.448-90.304-90.24-90.304z" fill="#ffffff" p-id="1481"></path>
+                </svg>
+            </button>
+        </div>
     </nav>
 
-    <div class="container">
+    <div class="container mx-auto p-4 md:p-6 bg-white rounded-xl shadow-lg">
         <!-- 留言提交表单 -->
-        <div class="mb-8 p-6 bg-white rounded-xl shadow-md">
-            <h1 class="text-2xl font-semibold text-gray-700 mb-4">发表留言</h1>
+        <div class="mb-8 p-6 bg-gray-50 rounded-xl shadow-md">
+            <h1 class="text-2xl font-semibold text-gray-800 mb-4">发表留言</h1>
             <form id="messageForm" class="space-y-4">
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-700 mb-1">用户名:</label>
-                    <input type="text" id="username" class="input-field" placeholder="您的名字" required>
+                    <input type="text" id="username" class="input-field placeholder-gray-400" placeholder="您的名字" required>
                 </div>
                 <div>
                     <label for="message" class="block text-sm font-medium text-gray-700 mb-1">留言:</label>
-                    <textarea id="message" class="input-field" placeholder="写下您的留言..." required></textarea>
+                    <textarea id="message" class="input-field placeholder-gray-400" placeholder="写下您的留言..." required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary w-full">提交留言</button>
             </form>
@@ -333,8 +292,8 @@
         </div>
 
         <!-- 留言列表 -->
-        <div class="mb-8 p-6 bg-white rounded-xl shadow-md">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">所有留言</h2>
+        <div class="mb-8 p-6 bg-gray-50 rounded-xl shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">所有留言</h2>
             <div id="messagesContainer">
                 <!-- 留言将在这里动态加载 -->
                 <p class="text-gray-500 text-center" id="noMessagesText">暂无留言。</p>
@@ -342,12 +301,12 @@
         </div>
 
         <!-- 管理员登录 -->
-        <div class="p-6 bg-white rounded-xl shadow-md">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">管理员登录</h2>
+        <div class="p-6 bg-gray-50 rounded-xl shadow-md">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">管理员登录</h2>
             <form id="adminLoginForm" class="space-y-4">
                 <div>
                     <label for="adminPassword" class="block text-sm font-medium text-gray-700 mb-1">管理员密码:</label>
-                    <input type="password" id="adminPassword" class="input-field" placeholder="输入管理员密码" required>
+                    <input type="password" id="adminPassword" class="input-field placeholder-gray-400" placeholder="输入管理员密码" required>
                 </div>
                 <button type="submit" class="btn btn-primary w-full">登录</button>
             </form>
@@ -356,20 +315,20 @@
         </div>
 
         <!-- 管理员设置面板 -->
-        <div class="p-6 bg-white rounded-xl shadow-md mt-6" id="adminConfigSection" style="display: none;">
-            <h2 class="text-2xl font-semibold text-gray-700 mb-4">管理员面板</h2>
+        <div class="p-6 bg-gray-50 rounded-xl shadow-md mt-6" id="adminConfigSection" style="display: none;">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">管理员面板</h2>
             <div class="flex flex-col md:flex-row gap-6">
                 <!-- 左侧导航栏 -->
                 <div id="adminNav" class="md:w-1/4 flex-shrink-0">
-                    <button class="admin-panel-nav-btn active" data-target="postingHoursContent">发言时段设置</button>
-                    <button class="admin-panel-nav-btn" data-target="ipManagementContent">IP 管理</button>
+                    <button class="admin-panel-nav-btn bg-gray-200 hover:bg-gray-300 text-gray-800" data-target="postingHoursContent">发言时段设置</button>
+                    <button class="admin-panel-nav-btn bg-gray-200 hover:bg-gray-300 text-gray-800" data-target="ipManagementContent">IP 管理</button>
                 </div>
 
                 <!-- 右侧内容区域 -->
                 <div id="adminContentArea" class="md:w-3/4 flex-grow">
-                    <!-- 设置发言时段内容 -->
-                    <div id="postingHoursContent" class="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                        <h3 class="text-xl font-semibold text-gray-700 mb-4">设置发言时段</h3>
+                    <!-- 发言时段内容 -->
+                    <div id="postingHoursContent" class="space-y-4 p-4 border border-gray-200 rounded-lg bg-white">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">设置发言时段</h3>
                         <div>
                             <label for="setStartTime" class="block text-sm font-medium text-gray-700 mb-1">开始时间:</label>
                             <input type="datetime-local" id="setStartTime" class="input-field" required>
@@ -383,11 +342,11 @@
                     </div>
 
                     <!-- IP 管理内容 -->
-                    <div id="ipManagementContent" class="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50 hidden">
-                        <h3 class="text-xl font-semibold text-gray-700 mb-4">IP 管理</h3>
+                    <div id="ipManagementContent" class="space-y-4 p-4 border border-gray-200 rounded-lg bg-white hidden">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">IP 管理</h3>
                         <div>
                             <label for="ipAddressInput" class="block text-sm font-medium text-gray-700 mb-1">IP 地址:</label>
-                            <input type="text" id="ipAddressInput" class="input-field" placeholder="例如: 192.168.1.1" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" title="请输入有效的IPv4地址" required>
+                            <input type="text" id="ipAddressInput" class="input-field placeholder-gray-400" placeholder="例如: 192.168.1.1" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" title="请输入有效的IPv4地址" required>
                         </div>
                         <div class="flex space-x-4">
                             <button id="banIpBtn" class="btn btn-danger w-1/2">封禁 IP</button>
@@ -395,8 +354,8 @@
                         </div>
                         <p id="ipManagementStatus" class="text-center mt-2 text-sm"></p>
 
-                        <h4 class="text-lg font-semibold text-gray-700 mt-6 mb-2">已封禁 IP 列表:</h4>
-                        <div id="bannedIpList" class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto">
+                        <h4 class="text-lg font-semibold text-gray-800 mt-6 mb-2">已封禁 IP 列表:</h4>
+                        <div id="bannedIpList" class="border border-gray-200 rounded-md p-3 max-h-48 overflow-y-auto bg-gray-50">
                             <p class="text-gray-500 text-sm text-center">加载中...</p>
                         </div>
                     </div>
@@ -406,7 +365,7 @@
     </div>
 
     <!-- Developer Info Footer -->
-    <footer class="mt-8 py-4 text-center text-gray-600 text-sm bg-gray-100">
+    <footer class="mt-8 py-4 text-center text-gray-600 text-sm bg-gray-200">
         <div class="mx-auto max-w-screen-lg px-4">
             <p>开发者信息：Mr_Onion</p>
             <p>联系邮箱：admin@mr-onion-blog.fun</p>
@@ -416,7 +375,8 @@
     </footer>
 
     <script>
-        // Cloudflare Worker URL - IMPORTANT: Replace this with your actual Cloudflare Worker URL.
+        // Configure your Cloudflare Worker URL
+        // IMPORTANT: Replace this with your actual Cloudflare Worker URL.
         const WORKER_URL = 'https://guest.mr-onion-blog.fun'; 
 
         // Global state variables
@@ -425,7 +385,7 @@
         let postingStartTime;
         let postingEndTime;
 
-        // DOM Elements
+        // DOM Elements - Centralized access for cleaner code
         const elements = {
             messagesContainer: document.getElementById('messagesContainer'),
             messageForm: document.getElementById('messageForm'),
@@ -450,17 +410,15 @@
             termsModal: document.getElementById('termsModal'),
             agreeTermsBtn: document.getElementById('agreeTermsBtn'),
             hideTermsTodayCheckbox: document.getElementById('hideTermsTodayCheckbox'),
-            // Elements for settings modal
             settingsModal: document.getElementById('settingsModal'),
             gearIcon: document.getElementById('gearIcon'),
             closeSettingsModalBtn: document.getElementById('closeSettingsModalBtn'),
             refreshMessagesBtn: document.getElementById('refreshMessagesBtn'),
             deleteTermsCookieBtn: document.getElementById('deleteTermsCookieBtn'),
-            // New admin panel elements
             adminNav: document.getElementById('adminNav'),
             adminNavButtons: null, // Will be populated after DOMContentLoaded
             postingHoursContent: document.getElementById('postingHoursContent'),
-            ipManagementContent: document.getElementById('ipManagementContent')
+            ipManagementContent: document.getElementById('ipManagementContent'),
         };
 
         // --- Utility Functions ---
@@ -533,9 +491,9 @@
         function showCustomAlert(message) {
             const modalHtml = `
                 <div id="customAlertModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                        <p class="text-lg text-gray-800 mb-4">${message}</p>
-                        <button id="customAlertCloseBtn" class="btn btn-primary w-full">确定</button>
+                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-gray-800">
+                        <p class="text-lg mb-4">${message}</p>
+                        <button id="customAlertCloseBtn" class="btn bg-indigo-600 hover:bg-indigo-700 text-white w-full">确定</button>
                     </div>
                 </div>
             `;
@@ -553,11 +511,11 @@
         function showCustomConfirm(message, onConfirm) {
             const modalHtml = `
                 <div id="customConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
-                        <p class="text-lg text-gray-800 mb-4">${message}</p>
+                    <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-gray-800">
+                        <p class="text-lg mb-4">${message}</p>
                         <div class="flex justify-end space-x-3">
-                            <button id="customConfirmCancelBtn" class="btn btn-secondary">取消</button>
-                            <button id="customConfirmOkBtn" class="btn btn-danger">确定</button>
+                            <button id="customConfirmCancelBtn" class="btn bg-gray-600 hover:bg-gray-700 text-white">取消</button>
+                            <button id="customConfirmOkBtn" class="btn bg-red-600 hover:bg-red-700 text-white">确定</button>
                         </div>
                     </div>
                 </div>
@@ -660,8 +618,13 @@
                     throw new Error(`HTTP Error! Status: ${response.status}`);
                 }
                 const config = await response.json();
-                postingStartTime = config.postingStartTime;
-                postingEndTime = config.postingEndTime;
+                // Default full day if config values are missing
+                const defaultFullStartTime = `${getCurrentDateFormatted()}T00:00`;
+                const defaultFullEndTime = `${getCurrentDateFormatted()}T23:59`;
+
+                postingStartTime = config.postingStartTime || defaultFullStartTime;
+                postingEndTime = config.postingEndTime || defaultFullEndTime;
+                
                 updatePostingHoursDisplay();
                 if (isAdmin) {
                     elements.setStartTimeInput.value = postingStartTime;
@@ -673,8 +636,10 @@
                 elements.postingHoursStatusText.textContent = 'Failed to fetch posting hours.';
                 elements.postingHoursStatusText.className = 'text-center mt-4 text-sm text-red-600';
                 // Fallback to default full day if config fetch fails
-                postingStartTime = `${getCurrentDateFormatted()}T00:00`;
-                postingEndTime = `${getCurrentDateFormatted()}T23:59`;
+                const defaultFullStartTime = `${getCurrentDateFormatted()}T00:00`;
+                const defaultFullEndTime = `${getCurrentDateFormatted()}T23:59`;
+                postingStartTime = defaultFullStartTime;
+                postingEndTime = defaultFullEndTime;
                 updatePostingHoursDisplay(); 
             }
         }
@@ -949,12 +914,19 @@
                 elements.noMessagesText.style.display = 'block';
             } else {
                 elements.noMessagesText.style.display = 'none';
-                messages.forEach(msg => {
+                // Sort messages: pinned first, then by timestamp (newest first)
+                const sortedMessages = [...messages].sort((a, b) => {
+                    if (a.isPinned && !b.isPinned) return -1;
+                    if (!a.isPinned && b.isPinned) return 1;
+                    return (b.timestamp || 0) - (a.timestamp || 0); // Newest first
+                });
+
+                sortedMessages.forEach(msg => {
                     const messageCard = document.createElement('div');
-                    messageCard.className = 'message-card';
+                    messageCard.className = 'message-card bg-white rounded-lg shadow-md p-4 mb-4 flex flex-col'; 
                     messageCard.innerHTML = `
-                        <div class="message-header">
-                            <div class="message-content-main">
+                        <div class="message-header flex justify-between items-start w-full mb-2">
+                            <div class="message-content-main flex-grow">
                                 <p class="text-lg font-semibold text-gray-900">
                                     ${msg.username ?? '匿名用户'}
                                     ${msg.isAdminMessage ? '<span class="admin-message-badge">管理员</span>' : ''}
@@ -965,7 +937,7 @@
                                 ${isAdmin && msg.senderIp ? `<p class="text-xs text-gray-400 mt-1">IP: ${msg.senderIp}</p>` : ''}
                             </div>
                             ${isAdmin ? `
-                                <div class="admin-controls">
+                                <div class="admin-controls flex flex-wrap gap-2 ml-4">
                                     <button class="btn btn-danger text-sm delete-btn" data-id="${msg.id}">删除</button>
                                     <button class="btn btn-info text-sm pin-toggle-btn" data-id="${msg.id}" data-pinned="${msg.isPinned ? 'true' : 'false'}">
                                         ${msg.isPinned ? '取消置顶' : '置顶'}
@@ -973,13 +945,13 @@
                                 </div>
                             ` : ''}
                         </div>
-                        <div class="replies-container w-full">
-                            <h4 class="text-md font-semibold text-gray-700 mb-2">回复:</h4>
+                        <div class="replies-container w-full mt-4 pt-4 border-t border-gray-200">
+                            <h4 class="text-md font-semibold text-gray-800 mb-2">回复:</h4>
                             <div class="replies-list-${msg.id}">
                                 ${msg.replies && msg.replies.length > 0 ?
                                     msg.replies.map(reply => `
-                                        <div class="reply-card">
-                                            <p class="font-medium text-gray-800">
+                                        <div class="reply-card bg-blue-50 border-l-4 border-blue-400 rounded-md p-3 mb-2 text-gray-800">
+                                            <p class="font-medium text-gray-900">
                                                 ${reply.username ?? '匿名用户'}
                                                 ${reply.isAdminReply ? '<span class="admin-reply-badge">管理员回复</span>' : ''}
                                             </p>
@@ -991,16 +963,16 @@
                                 }
                             </div>
                             <button class="btn btn-secondary text-sm mt-3 toggle-reply-form" data-id="${msg.id}">回复</button>
-                            <div class="reply-form-container hidden mt-3" id="replyFormContainer-${msg.id}">
-                                <h5 class="text-md font-semibold text-gray-700 mb-2">添加回复:</h5>
-                                <form class="reply-form" data-id="${msg.id}">
+                            <div class="reply-form-container hidden mt-3 p-4 bg-gray-100 border border-gray-200 rounded-lg" id="replyFormContainer-${msg.id}">
+                                <h5 class="text-md font-semibold text-gray-800 mb-2">添加回复:</h5>
+                                <form class="reply-form space-y-3" data-id="${msg.id}">
                                     <div>
                                         <label for="replyUsername-${msg.id}" class="block text-sm font-medium text-gray-700 mb-1">用户名:</label>
-                                        <input type="text" id="replyUsername-${msg.id}" class="input-field" placeholder="您的名字" value="${isAdmin ? '管理员' : ''}" required>
+                                        <input type="text" id="replyUsername-${msg.id}" class="input-field placeholder-gray-400" placeholder="您的名字" value="${isAdmin ? '管理员' : ''}" required>
                                     </div>
                                     <div>
                                         <label for="replyMessage-${msg.id}" class="block text-sm font-medium text-gray-700 mb-1">回复内容:</label>
-                                        <textarea id="replyMessage-${msg.id}" class="input-field" placeholder="写下您的回复..." required></textarea>
+                                        <textarea id="replyMessage-${msg.id}" class="input-field placeholder-gray-400" placeholder="写下您的回复..." required></textarea>
                                     </div>
                                     <button type="submit" class="btn btn-primary w-full">提交回复</button>
                                 </form>
@@ -1024,7 +996,7 @@
             } else {
                 ips.forEach(ip => {
                     const ipItem = document.createElement('div');
-                    ipItem.className = 'banned-ip-item';
+                    ipItem.className = 'banned-ip-item flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0';
                     ipItem.innerHTML = `
                         <span class="text-gray-800">${ip}</span>
                         <button class="btn btn-secondary text-xs unban-ip-btn" data-ip="${ip}">解封</button>
@@ -1096,13 +1068,20 @@
             elements.postingHoursContent.classList.add('hidden');
             elements.ipManagementContent.classList.add('hidden');
 
-            // Remove 'active' class from all nav buttons
-            elements.adminNavButtons.forEach(btn => btn.classList.remove('active'));
+            // Remove 'active' class from all nav buttons and reset their styles
+            elements.adminNavButtons.forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+            });
 
             // Show the selected content section
             document.getElementById(sectionId).classList.remove('hidden');
-            // Add 'active' class to the corresponding nav button
-            document.querySelector(`.admin-panel-nav-btn[data-target="${sectionId}"]`).classList.add('active');
+            // Add 'active' class and active styles to the corresponding nav button
+            const activeButton = document.querySelector(`.admin-panel-nav-btn[data-target="${sectionId}"]`);
+            if (activeButton) {
+                activeButton.classList.add('active', 'bg-indigo-600', 'text-white');
+                activeButton.classList.remove('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+            }
         }
 
         // --- Event Handlers ---
@@ -1172,7 +1151,8 @@
                 console.error('Admin login failed:', error);
                 elements.adminStatusText.textContent = '登录请求失败。';
                 elements.adminStatusText.className = 'text-center mt-4 text-sm text-red-600';
-            } finally {
+            }
+            finally {
                 elements.adminPasswordInput.value = '';
             }
         }
